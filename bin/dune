@@ -1,4 +1,4 @@
 (executable
  (public_name your_example)
  (name main)
- (libraries your_example))
+ (libraries your_example diskuvbox))

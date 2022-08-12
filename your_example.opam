@@ -11,8 +11,10 @@ homepage: "https://github.com/username/reponame"
 doc: "https://url/to/documentation"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
-  "ocaml"
+  "dkml-base-compiler"
   "dune" {>= "2.9"}
+  "diskuvbox"
+  "conf-dkml-cross-toolchain"
   "odoc" {with-doc}
 ]
 build: [
@@ -32,3 +34,7 @@ build: [
   ["dune" "install" "-p" name "--create-install-files" name]
 ]
 dev-repo: "git+https://github.com/username/reponame.git"
+x-opam-monorepo-opam-provided: [
+    "conf-dkml-cross-toolchain"
+    "dkml-base-compiler"
+]

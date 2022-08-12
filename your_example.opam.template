@@ -1,0 +1,4 @@
+x-opam-monorepo-opam-provided: [
+    "conf-dkml-cross-toolchain"
+    "dkml-base-compiler"
+]
