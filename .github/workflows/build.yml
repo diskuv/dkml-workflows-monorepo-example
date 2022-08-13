@@ -137,9 +137,9 @@ jobs:
           for i in _build/install/default.*; do
             target_abi=$(basename $i | sed s/default.//)
             if [ -e "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" ]; then
-              install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" "dist/${{ matrix.dkml-host-abi }}-${OPAM_PACKAGE}.exe"
+              install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" "dist/${target_abi}-${OPAM_PACKAGE}.exe"
             else
-              install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}" "dist/${{ matrix.dkml-host-abi }}-${OPAM_PACKAGE}"
+              install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}" "dist/${target_abi}-${OPAM_PACKAGE}"
             fi
           done
 
