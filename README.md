@@ -23,18 +23,18 @@ Expect to wait approximately:
 
 | Build Step                                               | First Time | Subsequent Times |
 | -------------------------------------------------------- | ---------- | ---------------- |
-| setup-dkml / win32-windows_x86                           | `29m`      | sdf              |
-| setup-dkml / win32-windows_x86_64                        | `29m`      | sdf              |
-| setup-dkml / macos-darwin_all [1]                        | `29m`      | sdf              |
-| setup-dkml / manylinux2014-linux_x86 (CentOS 7, etc.)    | `16m`      | sdf              |
-| setup-dkml / manylinux2014-linux_x86_64 (CentOS 7, etc.) | `13m`      | sdf              |
-| build / win32-windows_x86                                | `23m`      | sdf              |
-| build / win32-windows_x86_64                             | `19m`      | sdf              |
-| build / macos-darwin_all                                 | `27m`      | sdf              |
-| build / manylinux2014-linux_x86 (CentOS 7, etc.)         | `09m`      | sdf              |
-| build / manylinux2014-linux_x86_64 (CentOS 7, etc.)      | `09m`      | sdf              |
-| release                                                  | `01m`      | sdf              |
-| **TOTAL** *(not cumulative since steps run in parallel)* | `57m`      | sdf              |
+| setup-dkml / win32-windows_x86                           | `29m`      | `6m`             |
+| setup-dkml / win32-windows_x86_64                        | `29m`      | `6m`             |
+| setup-dkml / macos-darwin_all [1]                        | `29m`      | `6m`             |
+| setup-dkml / manylinux2014-linux_x86 (CentOS 7, etc.)    | `16m`      | `5m`             |
+| setup-dkml / manylinux2014-linux_x86_64 (CentOS 7, etc.) | `13m`      | `5m`             |
+| build / win32-windows_x86                                | `23m`      | todo             |
+| build / win32-windows_x86_64                             | `19m`      | todo             |
+| build / macos-darwin_all                                 | `27m`      | todo             |
+| build / manylinux2014-linux_x86 (CentOS 7, etc.)         | `09m`      | todo             |
+| build / manylinux2014-linux_x86_64 (CentOS 7, etc.)      | `09m`      | todo             |
+| release                                                  | `01m`      | todo             |
+| **TOTAL** *(not cumulative since steps run in parallel)* | `57m`      | todo             |
 
 You can see an example workflow at https://github.com/diskuv/dkml-workflows-monorepo-example/actions/workflows/package.yml
 
