@@ -12,5 +12,7 @@ jobs:
       with:
         config-file: '.github/workflows/static/mlc_config.json'
         use-verbose-mode: 'yes'
+        # don't go down duniverse/
+        max-depth: 1
     - name: Run ShellCheck
       uses: ludeeus/action-shellcheck@master
