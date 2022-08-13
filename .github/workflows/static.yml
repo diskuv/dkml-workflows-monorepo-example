@@ -16,3 +16,5 @@ jobs:
         max-depth: 1
     - name: Run ShellCheck
       uses: ludeeus/action-shellcheck@master
+      with:
+        ignore_paths: duniverse
