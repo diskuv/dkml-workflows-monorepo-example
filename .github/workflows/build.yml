@@ -112,13 +112,15 @@ jobs:
       # BOILERPLATE END: setup-dkml
 
       # BOILERPLATE START: setup-dkml for Opam Monorepo workflow
-      - name: Compile, cross-compile and test with Dune
+      - name: Compile and cross-compile with Dune
         run: |
           #!/bin/sh
           set -euf
 
-          # Build and test
-          opamrun install dune --yes
+          # Prereqs for Dune building including cross-compiling with ocamlfind toolchains
+          opamrun install dune ocamlfind --yes
+
+          # Build (no testing since problematic when cross-compiling unless we have emulators)
           case "${{ matrix.dkml-host-abi }}" in
             darwin_*)
               opamrun exec -- dune build -x darwin_arm64
