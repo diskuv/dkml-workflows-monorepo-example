@@ -143,6 +143,13 @@ jobs:
             fi
           done
 
+          # For Windows you must ask your users to first install the vc_redist executable.
+          # Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
+          case "${{ matrix.dkml-host-abi }}" in
+            windows_x86_64) wget -O dist/vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
+            windows_x86)    wget -O dist/vc_redist.x86.exe https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
+          esac
+
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.dkml-host-abi }}
