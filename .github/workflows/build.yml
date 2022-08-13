@@ -129,6 +129,7 @@ jobs:
 
           # Copy the installed binaries (including cross-compiled ones) from Opam into dist/ folder.
           # Name the binaries with the target ABI since GitHub Releases are flat namespaces.
+          install -d dist/
           mv _build/install/default _build/install/default.${{ matrix.dkml-host-abi }}
           for i in _build/default.*; do
             target_abi=$(basename $i | sed s/default.//)
