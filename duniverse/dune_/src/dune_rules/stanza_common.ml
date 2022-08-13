@@ -1,4 +1,5 @@
-open Import
+open Stdune
+open Dune_engine
 open Dune_lang.Decoder
 
 (* Parse and resolve "package" fields *)

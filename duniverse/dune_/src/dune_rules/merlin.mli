@@ -5,7 +5,9 @@
     the Merlin configuration as it will be marshalled to and from the
     configuration files, while [Merlin.t] represents raw information coming from
     the build system. *)
+open! Dune_engine
 
+open! Stdune
 open Import
 
 (** Type of "unprocessed" merlin information *)
@@ -17,19 +19,13 @@ module Processed : sig
 
   val load_file : Path.t -> (t, string) result
 
-  (** [print_file path] reads the configuration at path [path] and print it as a
-      s-expression *)
   val print_file : Path.t -> unit
-
-  (** [print_generic_dot_merlin paths] will merge the given configurations and
-      print the resulting configuration in dot-merlin syntax. *)
-  val print_generic_dot_merlin : Path.t list -> unit
 
   val get : t -> filename:string -> Sexp.t option
 end
 
 val make :
-     ?requires:Lib.t list Resolve.t
+     ?requires:Lib.t list Or_exn.t
   -> stdlib_dir:Path.t
   -> flags:Ocaml_flags.t
   -> ?preprocess:
@@ -51,4 +47,4 @@ val add_rules :
   -> more_src_dirs:Path.Source.t list
   -> expander:Expander.t
   -> t
-  -> unit Memo.t
+  -> unit

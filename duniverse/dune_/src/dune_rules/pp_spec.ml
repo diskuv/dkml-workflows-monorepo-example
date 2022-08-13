@@ -1,8 +1,8 @@
-type t = (Module.t -> lint:bool -> Module.t Memo.t) Module_name.Per_item.t
+type t = (Module.t -> lint:bool -> Module.t) Module_name.Per_item.t
 
-let make x = Memo.return x
+let make x = x
 
-let dummy : t = Module_name.Per_item.for_all (fun m ~lint:_ -> Memo.return m)
+let dummy : t = Module_name.Per_item.for_all (fun m ~lint:_ -> m)
 
 let pp_module t ?(lint = true) m =
   Module_name.Per_item.get t (Module.name m) m ~lint

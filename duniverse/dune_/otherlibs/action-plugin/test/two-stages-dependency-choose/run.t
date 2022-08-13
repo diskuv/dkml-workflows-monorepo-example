@@ -34,4 +34,5 @@ on based on dependency from the previous stage.
 
   $ dune runtest
   Building bar!
+        client alias runtest
   Hello from bar!

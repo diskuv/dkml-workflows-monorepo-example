@@ -1,5 +1,3 @@
-open Import
-
 module V1 = struct
   module Path = Path
   module Glob = Dune_glob.V1
@@ -24,39 +22,39 @@ module V1 = struct
   end = struct
     let catch_system_exceptions f ~name =
       try Ok (f ()) with
-      | Unix.Unix_error (error, syscall, arg) ->
-        let error = Unix_error.Detailed.create error ~syscall ~arg in
-        Error (name ^ ": " ^ Unix_error.Detailed.to_string_hum error)
+      | Unix.Unix_error (e, _, _) -> Error (name ^ ": " ^ Unix.error_message e)
       | Sys_error error -> Error (name ^ ": " ^ error)
 
     let read_directory =
       let rec loop dh acc =
         match Unix.readdir dh with
-        | "." | ".." -> loop dh acc
+        | "."
+        | ".." ->
+          loop dh acc
         | s -> loop dh (s :: acc)
         | exception End_of_file -> acc
       in
       fun path ->
         catch_system_exceptions ~name:"read_directory" (fun () ->
             let dh = Unix.opendir path in
-            Exn.protect
-              ~f:(fun () -> loop dh [] |> List.sort ~compare:String.compare)
+            Stdune.Exn.protect
+              ~f:(fun () -> loop dh [] |> List.sort String.compare)
               ~finally:(fun () -> Unix.closedir dh))
 
     let read_file path =
       catch_system_exceptions ~name:"read_file" (fun () ->
-          Io.String_path.read_file path)
+          Stdune.Io.String_path.read_file path)
 
     let write_file path data =
       catch_system_exceptions ~name:"write_file" (fun () ->
-          Io.String_path.write_file path data)
+          Stdune.Io.String_path.write_file path data)
   end
 
   module Stage = struct
     type 'a t =
       { action : unit -> 'a
       ; dependencies : Dependency.Set.t
-      ; targets : String.Set.t
+      ; targets : Stdune.String.Set.t
       }
 
     let map (t : 'a t) ~f = { t with action = (fun () -> f (t.action ())) }
@@ -64,7 +62,7 @@ module V1 = struct
     let both (t1 : 'a t) (t2 : 'b t) =
       { action = (fun () -> (t1.action (), t2.action ()))
       ; dependencies = Dependency.Set.union t1.dependencies t2.dependencies
-      ; targets = String.Set.union t1.targets t2.targets
+      ; targets = Stdune.String.Set.union t1.targets t2.targets
       }
   end
 
@@ -100,7 +98,7 @@ module V1 = struct
     lift_stage
       { action
       ; dependencies = Dependency.Set.singleton (File path)
-      ; targets = String.Set.empty
+      ; targets = Stdune.String.Set.empty
       }
 
   let write_file ~path ~data =
@@ -111,7 +109,7 @@ module V1 = struct
     lift_stage
       { action
       ; dependencies = Dependency.Set.empty
-      ; targets = String.Set.singleton path
+      ; targets = Stdune.String.Set.singleton path
       }
 
   (* TODO jstaron: If program tries to read empty directory, dune does not copy
@@ -120,13 +118,13 @@ module V1 = struct
     let path = Path.to_string path in
     let action () =
       Fs.read_directory path |> Execution_error.raise_on_fs_error
-      |> List.filter ~f:(Glob.test glob)
+      |> List.filter (Glob.test glob)
     in
     lift_stage
       { action
       ; dependencies =
           Dependency.Set.singleton (Glob { path; glob = Glob.to_string glob })
-      ; targets = String.Set.empty
+      ; targets = Stdune.String.Set.empty
       }
 
   let rec run_by_dune t context =
@@ -134,8 +132,10 @@ module V1 = struct
     | Pure () -> Context.respond context Done
     | Stage at ->
       let allowed_targets = Context.targets context in
-      let disallowed_targets = String.Set.diff at.targets allowed_targets in
-      (match String.Set.to_list disallowed_targets with
+      let disallowed_targets =
+        Stdune.String.Set.diff at.targets allowed_targets
+      in
+      (match Stdune.String.Set.to_list disallowed_targets with
       | [] -> ()
       | [ t ] ->
         Execution_error.raise
@@ -149,14 +149,15 @@ module V1 = struct
              "Following files were written despite not being declared as \
               targets in dune file:\n\
               %sTo fix, add them to target list in dune file."
-             (ts |> String.concat ~sep:"\n")));
+             (ts |> String.concat "\n")));
       let prepared_dependencies = Context.prepared_dependencies context in
       let required_dependencies =
         Dependency.Set.diff at.dependencies prepared_dependencies
       in
       if Dependency.Set.is_empty required_dependencies then
         run_by_dune (at.action ()) context
-      else Context.respond context (Need_more_deps required_dependencies)
+      else
+        Context.respond context (Need_more_deps required_dependencies)
 
   (* If executable is not run by dune, assume that all dependencies are already
      prepared and no target checking is done. *)
@@ -180,7 +181,8 @@ module V1 = struct
     try
       do_run t;
       exit 0
-    with Execution_error.E message ->
+    with
+    | Execution_error.E message ->
       prerr_endline message;
       exit 1
 

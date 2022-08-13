@@ -1,4 +1,4 @@
-open Import
+open Stdune
 
 module Target_dir : sig
   type context_related =
@@ -9,7 +9,7 @@ module Target_dir : sig
 
   type t =
     | Install of context_related
-    | Anonymous_action of context_related
+    | Alias of context_related
     | Regular of context_related
     | Invalid of Path.Build.t
 
@@ -19,7 +19,6 @@ end
 type target_kind =
   | Regular of Context_name.t * Path.Source.t
   | Alias of Context_name.t * Path.Source.t
-  | Anonymous_action of Context_name.t
   | Install of Context_name.t * Path.Source.t
   | Other of Path.Build.t
 
@@ -55,7 +54,9 @@ module Build : sig
 
   val install_dir : t
 
-  val anonymous_actions_dir : t
+  val alias_dir : t
+
+  val is_alias_stamp_file : t -> bool
 end
 
 module External : sig

@@ -25,7 +25,6 @@ Welcome to dune's documentation!
    formatting
    cross-compilation
    dune-libs
-   coq
    advanced-topics
    lexical-conventions
    faq
@@ -33,6 +32,5 @@ Welcome to dune's documentation!
    migration
    caching
    toplevel-integration
-   rpc
    goals
    hacking

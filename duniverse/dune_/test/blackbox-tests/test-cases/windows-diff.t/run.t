@@ -14,9 +14,5 @@
   Hello, world!
 
   $ dune build @cmp
-  File "dune", line 12, characters 0-41:
-  12 | (alias
-  13 |  (name   cmp)
-  14 |  (action (cmp a b)))
   Error: Files _build/default/a and _build/default/b differ.
   [1]

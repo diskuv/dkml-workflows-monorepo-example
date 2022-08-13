@@ -1,5 +1,4 @@
 open! Stdune
-open Fiber.O
 
 module type Implicit_output = sig
   type t
@@ -80,8 +79,7 @@ let produce' ~union opt v =
   | Some v0 -> opt := Some (union v0 v)
 
 let produce (type o) (type_ : o t) (value : o) =
-  let+ current_handler = Fiber.Var.get current_handler in
-  match current_handler with
+  match Fiber.Var.get current_handler with
   | None ->
     Code_error.raise
       "Implicit_output.produce called without any handler in dynamic scope"
@@ -98,10 +96,10 @@ let produce (type o) (type_ : o t) (value : o) =
 
 let produce_opt t v =
   match v with
-  | None -> Fiber.return ()
+  | None -> ()
   | Some v -> produce t v
 
-let collect (type o) (type_ : o t) f =
+let collect_async (type o) (type_ : o t) f =
   let output = ref None in
   Fiber.map
     (Fiber.Var.set current_handler
@@ -115,7 +113,24 @@ let collect (type o) (type_ : o t) f =
        f)
     ~f:(fun res -> (res, !output))
 
-let forbid f = Fiber.Var.unset current_handler f
+let collect_sync (type o) (type_ : o t) f =
+  let output = ref None in
+  let res =
+    Fiber.Var.set_sync current_handler
+      (module struct
+        type nonrec o = o
+
+        let type_ = type_
+
+        let so_far = output
+      end)
+      f
+  in
+  (res, !output)
+
+let forbid_sync f = Fiber.Var.unset_sync current_handler f
+
+let forbid_async f = Fiber.Var.unset current_handler f
 
 let add (type a) (module T : Implicit_output with type t = a) =
   Witness.create (module T)

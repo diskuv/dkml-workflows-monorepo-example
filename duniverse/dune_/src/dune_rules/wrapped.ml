@@ -1,11 +1,10 @@
-open Import
+open! Dune_engine
+open! Stdune
 open Dune_lang.Decoder
 
 type t =
   | Simple of bool
   | Yes_with_transition of string
-
-let equal = Poly.equal
 
 let decode =
   sum
@@ -28,7 +27,7 @@ let to_bool = function
   | Yes_with_transition _ -> true
 
 let to_dyn =
-  let open Dyn in
+  let open Dyn.Encoder in
   function
-  | Simple s -> variant "Simple" [ bool s ]
-  | Yes_with_transition s -> variant "Yes_with_transition" [ string s ]
+  | Simple s -> constr "Simple" [ bool s ]
+  | Yes_with_transition s -> constr "Yes_with_transition" [ string s ]

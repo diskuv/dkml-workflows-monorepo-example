@@ -6,7 +6,6 @@ module File : sig
     | Default
     | No_log_file
     | This of Path.t
-    | Out_channel of out_channel
 end
 
 (** Initialise the log file *)
@@ -21,9 +20,7 @@ val info_user_message : User_message.t -> unit
 
 (** [info paragraphs] is a short-hand for:
 
-    {[
-      info_user_message (User_message.make paragraphs)
-    ]} *)
+    {[ info_user_message (User_message.make paragraphs) ]} *)
 val info : User_message.Style.t Pp.t list -> unit
 
 (** Print an executed command in the log *)

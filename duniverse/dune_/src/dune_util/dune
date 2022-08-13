@@ -1,9 +1,4 @@
 (library
  (name dune_util)
- (libraries
-  stdune
-  xdg
-  build_path_prefix_map
-  dune_sexp
-  memo
-  (re_export unix)))
+ (public_name dune-private-libs.dune_util)
+ (libraries stdune dune_lang))

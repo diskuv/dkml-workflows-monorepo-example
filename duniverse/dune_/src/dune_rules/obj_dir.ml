@@ -1,3 +1,5 @@
+open! Dune_engine
+open! Stdune
 open Import
 
 module Paths = struct
@@ -23,21 +25,25 @@ module External = struct
     ; public_cmi_dir : Path.t option
     }
 
-  let equal : t -> t -> bool = Poly.equal
-
   let make ~dir ~has_private_modules ~private_lib =
     let private_dir =
-      if has_private_modules then Some (Path.relative dir ".private") else None
+      if has_private_modules then
+        Some (Path.relative dir ".private")
+      else
+        None
     in
     let public_cmi_dir =
-      if private_lib then Some (Path.relative dir ".public_cmi") else None
+      if private_lib then
+        Some (Path.relative dir ".public_cmi")
+      else
+        None
     in
     { public_dir = dir; private_dir; public_cmi_dir }
 
   let public_cmi_dir t = Option.value ~default:t.public_dir t.public_cmi_dir
 
   let to_dyn { public_dir; private_dir; public_cmi_dir } =
-    let open Dyn in
+    let open Dyn.Encoder in
     record
       [ ("public_dir", Path.to_dyn public_dir)
       ; ("private_dir", option Path.to_dyn private_dir)
@@ -106,11 +112,9 @@ module Local = struct
     ; private_lib : bool
     }
 
-  let equal : t -> t -> bool = Poly.equal
-
   let to_dyn { dir; obj_dir; native_dir; byte_dir; public_cmi_dir; private_lib }
       =
-    let open Dyn in
+    let open Dyn.Encoder in
     record
       [ ("dir", Path.Build.to_dyn dir)
       ; ("obj_dir", Path.Build.to_dyn obj_dir)
@@ -166,7 +170,9 @@ module Local = struct
   let cm_dir t cm_kind _ =
     match cm_kind with
     | Cm_kind.Cmx -> native_dir t
-    | Cmo | Cmi -> byte_dir t
+    | Cmo
+    | Cmi ->
+      byte_dir t
 
   let cm_public_dir t (cm_kind : Cm_kind.t) =
     match cm_kind with
@@ -179,13 +185,6 @@ type _ t =
   | External : External.t -> Path.t t
   | Local : Local.t -> Path.Build.t t
   | Local_as_path : Local.t -> Path.t t
-
-let equal (type a) (x : a t) (y : a t) =
-  match (x, y) with
-  | External x, External y -> External.equal x y
-  | Local x, Local y -> Local.equal x y
-  | Local_as_path x, Local_as_path y -> Local.equal x y
-  | _, _ -> false
 
 let of_local : Path.Build.t t -> Path.t t =
  fun t ->
@@ -233,11 +232,11 @@ let dir = get_path ~l:Local.dir ~e:External.dir
 let obj_dir = get_path ~l:Local.obj_dir ~e:External.obj_dir
 
 let to_dyn (type path) (t : path t) =
-  let open Dyn in
+  let open Dyn.Encoder in
   match t with
-  | Local e -> variant "Local" [ Local.to_dyn e ]
-  | Local_as_path e -> variant "Local_as_path" [ Local.to_dyn e ]
-  | External e -> variant "External" [ External.to_dyn e ]
+  | Local e -> constr "Local" [ Local.to_dyn e ]
+  | Local_as_path e -> constr "Local_as_path" [ Local.to_dyn e ]
+  | External e -> constr "External" [ External.to_dyn e ]
 
 let convert_to_external (t : Path.Build.t t) ~dir =
   match t with
@@ -318,7 +317,9 @@ module Module = struct
 
   let has_impl_if_needed m ~kind =
     match (kind : Cm_kind.t) with
-    | Cmo | Cmx -> Module.has m ~ml_kind:Impl
+    | Cmo
+    | Cmx ->
+      Module.has m ~ml_kind:Impl
     | Cmi -> true
 
   let raise_no_impl m ~kind =
@@ -327,8 +328,10 @@ module Module = struct
 
   let o_file t m ~ext_obj =
     let kind = Cm_kind.Cmx in
-    if Module.has m ~ml_kind:Impl then Some (obj_file t m ~kind ~ext:ext_obj)
-    else None
+    if Module.has m ~ml_kind:Impl then
+      Some (obj_file t m ~kind ~ext:ext_obj)
+    else
+      None
 
   let o_file_exn t m ~ext_obj =
     match o_file t m ~ext_obj with
@@ -339,7 +342,8 @@ module Module = struct
     if has_impl_if_needed m ~kind then
       let ext = Cm_kind.ext kind in
       Some (obj_file t m ~kind ~ext)
-    else None
+    else
+      None
 
   let cm_file_exn t m ~kind =
     match cm_file t m ~kind with
@@ -351,7 +355,10 @@ module Module = struct
     let is_private = Module.visibility m = Private in
     let has_impl = Module.has m ~ml_kind:Impl in
     match kind with
-    | (Cmx | Cmo) when not has_impl -> None
+    | Cmx
+    | Cmo
+      when not has_impl ->
+      None
     | Cmi when is_private -> None
     | _ ->
       let ext = Cm_kind.ext kind in
@@ -411,7 +418,8 @@ module Module = struct
       List.filter_map modules ~f:(fun m ->
           if Module.has m ~ml_kind:Impl then
             Some (path_of_build t (obj_file t m ~kind:Cmx ~ext:ext_obj))
-          else None)
+          else
+            None)
 
     let cm_files t modules ~kind =
       List.filter_map modules ~f:(fun m ->

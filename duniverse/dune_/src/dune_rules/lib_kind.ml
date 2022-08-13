@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 module Ppx_args = struct
   module Cookie = struct
@@ -8,7 +9,7 @@ module Ppx_args = struct
       }
 
     let to_dyn x =
-      let open Dyn in
+      let open Dyn.Encoder in
       record
         [ ("name", string x.name); ("value", String_with_vars.to_dyn x.value) ]
 
@@ -21,7 +22,8 @@ module Ppx_args = struct
                if String.contains str '=' then
                  User_error.raise ~loc
                    [ Pp.text "Character '=' is not allowed in cookie names" ]
-               else str)
+               else
+                 str)
          and+ value = String_with_vars.decode in
          { name; value })
 
@@ -35,7 +37,7 @@ module Ppx_args = struct
   let empty = { cookies = [] }
 
   let to_dyn { cookies } =
-    let open Dyn in
+    let open Dyn.Encoder in
     record [ ("cookies", list Cookie.to_dyn cookies) ]
 
   let decode =
@@ -56,14 +58,12 @@ type t =
   | Ppx_deriver of Ppx_args.t
   | Ppx_rewriter of Ppx_args.t
 
-let equal = Poly.equal
-
 let to_dyn x =
-  let open Dyn in
+  let open Dyn.Encoder in
   match x with
-  | Normal -> variant "Normal" []
-  | Ppx_deriver args -> variant "Ppx_deriver" [ Ppx_args.to_dyn args ]
-  | Ppx_rewriter args -> variant "Ppx_rewriter" [ Ppx_args.to_dyn args ]
+  | Normal -> constr "Normal" []
+  | Ppx_deriver args -> constr "Ppx_deriver" [ Ppx_args.to_dyn args ]
+  | Ppx_rewriter args -> constr "Ppx_rewriter" [ Ppx_args.to_dyn args ]
 
 let decode =
   let open Dune_lang.Decoder in
@@ -82,7 +82,8 @@ let encode t =
     match t with
     | Normal -> Dune_lang.atom "normal"
     | Ppx_deriver x -> List (Dune_lang.atom "ppx_deriver" :: Ppx_args.encode x)
-    | Ppx_rewriter x -> List (Dune_lang.atom "ppx_rewriter" :: Ppx_args.encode x)
+    | Ppx_rewriter x ->
+      List (Dune_lang.atom "ppx_rewriter" :: Ppx_args.encode x)
   with
   | List [ x ] -> x
   | x -> x

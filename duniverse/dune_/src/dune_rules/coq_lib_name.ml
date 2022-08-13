@@ -1,14 +1,14 @@
-open! Import
+open! Dune_engine
 
 (* This file is licensed under The MIT License *)
 (* (c) MINES ParisTech 2018-2019               *)
 (* (c) INRIA 2020                              *)
 (* Written by: Emilio Jesús Gallego Arias *)
 
-(* Coq Directory Path *)
-type t = string list
+open! Stdune
 
-let compare = List.compare ~compare:String.compare
+(* Coq Directoy Path *)
+type t = string list
 
 let to_string x = String.concat ~sep:"." x
 
@@ -28,7 +28,7 @@ let encode : t Dune_lang.Encoder.t =
 
 let pp x = Pp.text (to_string x)
 
-let to_dyn = Dyn.(list string)
+let to_dyn = Dyn.Encoder.(list string)
 
 module Rep = struct
   type nonrec t = t

@@ -12,8 +12,6 @@
   $ (cd c2 && dune build)
   Error: Path a has already been scanned. Cannot scan it again through symlink
   a/x/x
-  Error: Path b has already been scanned. Cannot scan it again through symlink
-  b/x/x
   [1]
 
   $ mkdir symlink-outside-root
@@ -31,8 +29,6 @@
   $ (cd symlink-outside-root2/root && dune build)
   Error: Path src/a has already been scanned. Cannot scan it again through
   symlink src/a/x/x
-  Error: Path src/b has already been scanned. Cannot scan it again through
-  symlink src/b/x/x
   [1]
 
   $ mkdir -p symlink-outside-root3/root

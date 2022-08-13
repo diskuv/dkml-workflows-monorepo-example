@@ -6,16 +6,16 @@ env vars set in env should be visible to all subdirs
 env vars interpreted in various fields, such as flags
   $ dune build --force --root flag-field
   Entering directory 'flag-field'
-  var visible from dune: -principal
+  var visible from dune: -principal         foo alias default
   DUNE_FOO: -principal
 
 global vars are overridden
   $ DUNE_FOO=blarg dune build --force --root flag-field
   Entering directory 'flag-field'
-  var visible from dune: -principal
+  var visible from dune: -principal         foo alias default
   DUNE_FOO: -principal
 
-proper inheritance chain of env stanzas
+proper inhertiance chain of env stanzas
   $ dune build --root inheritance
   Entering directory 'inheritance'
   DUNE_FOO: foo-sub

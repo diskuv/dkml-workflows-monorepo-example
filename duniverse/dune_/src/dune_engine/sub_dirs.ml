@@ -1,5 +1,4 @@
-open! Import
-module Stanza = Dune_lang.Stanza
+open! Stdune
 
 module Status = struct
   type t =
@@ -26,14 +25,14 @@ module Status = struct
       | Normal -> normal
 
     let to_dyn f { data_only; vendored; normal } =
-      let open Dyn in
+      let open Dyn.Encoder in
       record
         [ ("data_only", f data_only)
         ; ("vendored", f vendored)
         ; ("normal", f normal)
         ]
 
-    let init ~f =
+    let init f =
       { data_only = f Data_only; vendored = f Vendored; normal = f Normal }
   end
 
@@ -43,11 +42,6 @@ module Status = struct
     | Data_only -> Variant ("Data_only", [])
     | Vendored -> Variant ("Vendored", [])
     | Normal -> Variant ("Normal", [])
-
-  let to_string = function
-    | Data_only -> "data_only"
-    | Vendored -> "vendored"
-    | Normal -> "normal"
 
   module Or_ignored = struct
     type nonrec t =
@@ -63,13 +57,6 @@ module Status = struct
     let all = { data_only = true; vendored = true; normal = true }
 
     let normal_only = { data_only = false; vendored = false; normal = true }
-
-    let to_list { data_only; vendored; normal } =
-      let acc = [] in
-      let acc = if vendored then Vendored :: acc else acc in
-      let acc = if data_only then Data_only :: acc else acc in
-      let acc = if normal then Normal :: acc else acc in
-      acc
   end
 end
 
@@ -90,7 +77,7 @@ let default =
   }
 
 let or_default (t : _ Status.Map.t) : _ Status.Map.t =
-  Status.Map.init ~f:(fun kind ->
+  Status.Map.init (fun kind ->
       match Status.Map.find t kind with
       | None -> Status.Map.find default kind
       | Some (_loc, s) -> s)
@@ -115,37 +102,33 @@ let eval (t : _ Status.Map.t) ~dirs =
 
      In this setup, bar is actually ignored rather than being data only. Because
      it was excluded from the total set of directories. *)
-  String.Set.of_list dirs
-  |> String.Set.to_map ~f:(fun _ -> ())
-  |> String.Map.filter_mapi ~f:(fun dir () : Status.t option ->
-         let statuses =
-           Status.Map.merge t default ~f:(fun pred standard ->
-               Predicate_lang.Glob.exec pred ~standard dir)
-           |> Status.Set.to_list
-         in
-         match statuses with
-         | [] -> None
-         | statuses -> (
-           (* If a directory has a status other than [Normal], then the [Normal]
-              status is irrelevant so we just filter it out. *)
-           match
-             List.filter statuses ~f:(function
-               | Status.Normal -> false
-               | _ -> true)
-           with
-           | [] -> Some Normal
-           | [ status ] -> Some status
-           | statuses ->
-             User_error.raise
-               [ Pp.textf
-                   "Directory %s was marked as %s, it can't be marked as %s."
-                   dir
-                   (String.enumerate_and
-                      (List.map statuses ~f:Status.to_string))
-                   (match List.length statuses with
-                   | 2 -> "both"
-                   | _ -> "all these")
-               ]))
+  let normal =
+    Predicate_lang.Glob.filter t.normal ~standard:default.normal dirs
+  in
+  let eval ~standard pred = Predicate_lang.Glob.filter pred ~standard dirs in
+  let data_only = eval ~standard:default.data_only t.data_only in
+  let vendored = eval ~standard:default.vendored t.vendored in
+  let statuses =
+    List.fold_left normal ~init:String.Map.empty ~f:(fun acc dir ->
+        String.Map.set acc dir Status.Normal)
+  in
+  let statuses =
+    List.fold_left data_only ~init:statuses ~f:(fun acc dir ->
+        String.Map.set acc dir Status.Data_only)
+  in
+  List.fold_left vendored ~init:statuses ~f:(fun acc dir ->
+      String.Map.update acc dir ~f:(function
+        | None
+        | Some Status.Vendored
+        | Some Normal ->
+          Some Vendored
+        | Some Data_only ->
+          User_error.raise
+            [ Pp.textf
+                "Directory %s was marked as vendored and data_only, it can't \
+                 be marked as both."
+                dir
+            ]))
 
 type subdir_stanzas = (Loc.t * Predicate_lang.Glob.t) option Status.Map.t
 
@@ -161,7 +144,7 @@ module Dir_map = struct
     }
 
   let empty_per_dir =
-    { sexps = []; subdir_status = Status.Map.init ~f:(fun _ -> None) }
+    { sexps = []; subdir_status = Status.Map.init (fun _ -> None) }
 
   let empty = { data = empty_per_dir; nodes = String.Map.empty }
 
@@ -184,11 +167,15 @@ module Dir_map = struct
     { sexps = d1.sexps @ d2.sexps
     ; subdir_status =
         Status.Map.merge d1.subdir_status d2.subdir_status ~f:(fun l r ->
-            Option.merge l r ~f:(fun (loc, _) (loc2, _) ->
-                User_error.raise ~loc
-                  [ Pp.text "This stanza stanza was already specified at:"
-                  ; Pp.verbatim (Loc.to_file_colon_line loc2)
-                  ]))
+            match (l, r) with
+            | acc, None
+            | None, acc ->
+              acc
+            | Some (loc, _), Some (loc2, _) ->
+              User_error.raise ~loc
+                [ Pp.text "This stanza stanza was already specified at:"
+                ; Pp.verbatim (Loc.to_file_colon_line loc2)
+                ])
     }
 
   let rec merge t1 t2 : t =
@@ -201,14 +188,9 @@ module Dir_map = struct
   let merge_all = List.fold_left ~f:merge ~init:empty
 end
 
-let descendant_path =
+let descedant_path =
   Dune_lang.Decoder.plain_string (fun ~loc fn ->
-      if Filename.is_relative fn then
-        Path.Local.parse_string_exn ~loc fn |> Path.Local.explode
-      else
-        let msg = [ Pp.textf "invalid sub-directory path %S" fn ] in
-        let hints = [ Pp.textf "sub-directory path must be relative" ] in
-        User_error.raise ~loc ~hints msg)
+      Path.Local.parse_string_exn ~loc fn |> Path.Local.explode)
 
 let strict_subdir field_name =
   let open Dune_lang.Decoder in
@@ -226,13 +208,16 @@ let strict_subdir field_name =
         User_error.raise ~loc ~hints msg
       else if
         match dn with
-        | "" | "." ->
+        | ""
+        | "." ->
           let hints = [ Pp.textf "did you mean (%s *)?" field_name ] in
           User_error.raise ~loc ~hints msg
         | ".." -> true
         | _ -> false
-      then User_error.raise ~loc msg
-      else (loc, dn))
+      then
+        User_error.raise ~loc msg
+      else
+        (loc, dn))
 
 let strict_subdir_glob field_name =
   let open Dune_lang.Decoder in
@@ -268,7 +253,7 @@ let decode =
   let data_only_dirs =
     located
       (Dune_lang.Syntax.since Stanza.syntax (1, 6)
-      >>> strict_subdir_glob "data_only_dirs")
+      >>> strict_subdir_glob "data_only")
   in
   let vendored_dirs =
     (* let decode = Predicate_lang.Glob.decode in *)
@@ -278,7 +263,7 @@ let decode =
   in
   let rec subdir () =
     let* () = Dune_lang.Syntax.since Stanza.syntax (2, 5) in
-    let* subdir = descendant_path in
+    let* subdir = descedant_path in
     let+ node = fields (decode ~allow_ignored_subdirs:false) in
     Dir_map.make_at_path subdir node
   and decode ~allow_ignored_subdirs =
@@ -286,7 +271,8 @@ let decode =
     and+ data_only = field_o "data_only_dirs" data_only_dirs
     and+ ignored_sub_dirs =
       let parser =
-        if allow_ignored_subdirs then ignored_sub_dirs
+        if allow_ignored_subdirs then
+          ignored_sub_dirs
         else
           let+ loc = loc in
           User_error.raise ~loc
@@ -319,77 +305,44 @@ let decode =
   in
   enter (fields (decode ~allow_ignored_subdirs:true))
 
-type decoder =
-  { decode : 'a. Dune_lang.Ast.t list -> 'a Dune_lang.Decoder.t -> 'a }
-
-let decode_includes ~context (decoder : decoder) =
-  let rec subdir ~loc:subdir_loc ~context ~path ~inside_include sexps =
-    let name, path, nodes =
-      decoder.decode sexps
-      @@
-      let open Dune_lang.Decoder in
-      enter
-      @@ let* dune_version = Dune_lang.Syntax.get_exn Stanza.syntax in
-         let* name, path =
-           plain_string (fun ~loc s ->
-               (Dune_lang.Ast.atom_or_quoted_string loc s, s :: path))
+let decode_includes ~context =
+  let open Dune_lang.Decoder in
+  let rec subdir ~context ~path ~inside_include =
+    let* dune_version = Dune_lang.Syntax.get_exn Stanza.syntax in
+    let* loc = loc in
+    let* name, path =
+      plain_string (fun ~loc s ->
+          (Atom (loc, Dune_lang.Atom.of_string s), s :: path))
+    in
+    let+ nodes = fields (decode ~context ~path ~inside_include) in
+    let required_version = (2, 7) in
+    if inside_include && dune_version < required_version then
+      Dune_lang.Syntax.Error.since loc Stanza.syntax required_version
+        ~what:"Using a `subdir' stanza within an `include'd file";
+    List
+      (loc, Atom (Loc.none, Dune_lang.Atom.of_string "subdir") :: name :: nodes)
+  and decode ~context ~path ~inside_include =
+    let* includes =
+      multi_field "include"
+        (let* loc = loc
+         and+ fn = relative_file in
+         let fn =
+           List.fold_left
+             ~f:(fun fn dir -> Filename.concat dir fn)
+             ~init:fn path
          in
-         let+ nodes = repeat raw in
-         let required_version = (2, 7) in
-         if inside_include && dune_version < required_version then
-           Dune_lang.Syntax.Error.since subdir_loc Stanza.syntax
-             required_version
-             ~what:"Using a `subdir' stanza within an `include'd file";
-         (name, path, nodes)
+         let sexps, context = Include_stanza.load_sexps ~context (loc, fn) in
+         let* () = set_input sexps in
+         fields (decode ~context ~path ~inside_include:true))
     in
-    let open Memo.O in
-    let+ nodes = decode ~context ~path ~inside_include nodes in
-    Dune_lang.Ast.List
-      ( subdir_loc
-      , Atom (Loc.none, Dune_lang.Atom.of_string "subdir") :: name :: nodes )
-  and decode ~context ~path ~inside_include (sexps : Dune_lang.Ast.t list) =
-    let sexps, subdirs, includes =
-      decoder.decode sexps
-      @@
-      let open Dune_lang.Decoder in
-      enter @@ fields
-      @@ let+ includes =
-           multi_field "include"
-             (let+ loc = loc
-              and+ fn = relative_file in
-              let fn =
-                List.fold_left ~init:fn path ~f:(fun fn dir ->
-                    Filename.concat dir fn)
-              in
-              (loc, fn))
-         and+ subdirs =
-           multi_field "subdir"
-             (let+ loc = loc
-              and+ stanzas = repeat raw in
-              (loc, stanzas))
-         and+ sexps = leftover_fields in
-         (sexps, subdirs, includes)
-    in
-    let open Memo.O in
-    let+ includes, subdirs =
-      Memo.fork_and_join
-        (fun () ->
-          Memo.parallel_map includes ~f:(fun (loc, fn) ->
-              let* sexps, context =
-                Include_stanza.load_sexps ~context (loc, fn)
-              in
-              decode ~context ~path ~inside_include:true sexps))
-        (fun () ->
-          Memo.parallel_map subdirs ~f:(fun (loc, sexps) ->
-              subdir ~loc ~context ~path ~inside_include sexps))
-    in
+    let+ subdirs = multi_field "subdir" (subdir ~context ~path ~inside_include)
+    and+ sexps = leftover_fields in
     List.concat (sexps :: subdirs :: includes)
   in
-  fun sexps -> decode ~context ~path:[] ~inside_include:false sexps
+  enter (fields (decode ~context ~path:[] ~inside_include:false))
 
-let decode ~file (decoder : decoder) sexps =
-  let open Memo.O in
-  let+ sexps =
-    decode_includes ~context:(Include_stanza.in_file file) decoder sexps
-  in
-  decoder.decode sexps decode
+let decode ~file =
+  let open Dune_lang.Decoder in
+  let* sexps = decode_includes ~context:(Include_stanza.in_file file) in
+  let* () = set_input [ List (Loc.none, sexps) ] in
+  decode

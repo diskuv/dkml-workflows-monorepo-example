@@ -1,4 +1,5 @@
 (** Compilation contexts *)
+open! Dune_engine
 
 (** Dune supports two different kind of contexts:
 
@@ -19,7 +20,8 @@
     this allow for simple cross-compilation: when an executable running on the
     host is needed, it is obtained by looking in another context. *)
 
-open Import
+open! Stdune
+open! Import
 
 module Kind : sig
   module Opam : sig
@@ -78,21 +80,22 @@ type t = private
   ; ocamlmklib : Action.Prog.t
   ; ocamlobjinfo : Action.Prog.t
   ; env : Env.t
-  ; findlib_paths : Path.t list
+  ; findlib : Findlib.t
   ; findlib_toolchain : Context_name.t option  (** Misc *)
   ; default_ocamlpath : Path.t list
   ; arch_sixtyfour : bool
+  ; install_prefix : Path.t Memo.Lazy.Async.t
   ; ocaml_config : Ocaml_config.t
   ; ocaml_config_vars : Ocaml_config.Vars.t
-  ; version : Ocaml.Version.t
+  ; version : Ocaml_version.t
   ; stdlib_dir : Path.t
   ; supports_shared_libraries : Dynlink_supported.By_the_os.t
+  ; which : string -> Path.t option
+        (** Given a program name, e.g. ["ocaml"], find the path to a preferred
+            executable in PATH, e.g. [Some "/path/to/ocaml.opt.exe"]. *)
   ; lib_config : Lib_config.t
   ; build_context : Build_context.t
-  ; make : Path.t option Memo.Lazy.t
   }
-
-val which : t -> string -> Path.t option Memo.t
 
 val equal : t -> t -> bool
 
@@ -105,11 +108,10 @@ val to_dyn_concise : t -> Dyn.t
 (** Compare the context names *)
 val compare : t -> t -> Ordering.t
 
+val install_ocaml_libdir : t -> Path.t option Fiber.t
+
 (** Return the compiler needed for this compilation mode *)
 val compiler : t -> Mode.t -> Action.Prog.t
-
-(** Return what [%{make}] should expand into *)
-val make : t -> Path.t option Memo.t
 
 (** The best compilation mode for this context *)
 val best_mode : t -> Mode.t
@@ -131,22 +133,10 @@ val map_exe : t -> Path.t -> Path.t
 
 val build_context : t -> Build_context.t
 
-(** Query where build artifacts should be installed if the user doesn't specify
-    an explicit installation directory. *)
-val roots : t -> Path.t option Install.Section.Paths.Roots.t
-
-(** Generate the rules for producing the files needed by configurator. *)
-val gen_configurator_rules : t -> unit Memo.t
-
-(** Force the files required by configurator at runtime to be produced. *)
-val force_configurator_files : unit Memo.Lazy.t
-
-val host : t -> t
+val init_configurator : t -> unit
 
 module DB : sig
-  val get : Context_name.t -> t Memo.t
+  val get : Path.Build.t -> t
 
-  val all : unit -> t list Memo.t
-
-  val by_dir : Path.Build.t -> t Memo.t
+  val all : unit -> t list Fiber.t
 end

@@ -1,3 +1,6 @@
+open! Dune_engine
+open! Stdune
+
 type t =
   | Public
   | Private

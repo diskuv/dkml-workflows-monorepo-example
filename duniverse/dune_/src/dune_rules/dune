@@ -3,28 +3,29 @@
 (library
  (name dune_rules)
  (libraries
+  unix
   stdune
-  csexp
   fiber
+  incremental_cycles
+  dag
   memo
-  ocaml
+  xdg
   dune_re
+  threads.posix
   opam_file_format
   dune_lang
+  cache_daemon
+  cache
   dune_glob
   ocaml_config
+  catapult
+  jbuild_support
   dune_action_plugin
-  chrome_trace
-  dune_stats
-  dune_site_private
   dune_util
   dune_meta_parser
   dune_section
-  dune_cache
   build_path_prefix_map
-  dune_engine
-  dune_config
-  unix)
+  dune_engine)
  (synopsis "Internal Dune library, do not use!"))
 
 (ocamllex ocamlobjinfo cram_lexer)
@@ -48,16 +49,3 @@
  (mode fallback)
  (action
   (copy# setup.defaults.ml setup.ml)))
-
-(rule
- (mode promote)
- (alias runtest)
- (targets setup.defaults.ml)
- (deps %{project_root}/configure.ml)
- (action
-  (chdir
-   %{project_root}
-   (setenv
-    DUNE_CONFIGURE_OUTPUT
-    "src/dune_rules/setup.defaults.ml"
-    (run %{ocaml} configure.ml)))))

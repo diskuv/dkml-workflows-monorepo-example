@@ -1,4 +1,4 @@
-open Import
+open! Dune_engine
 
 module Ppx_args : sig
   module Cookie : sig
@@ -18,8 +18,6 @@ type t =
   | Ppx_deriver of Ppx_args.t
   | Ppx_rewriter of Ppx_args.t
 
-val to_dyn : t Dyn.builder
-
-val equal : t -> t -> bool
+val to_dyn : t Stdune.Dyn.Encoder.t
 
 include Dune_lang.Conv.S with type t := t

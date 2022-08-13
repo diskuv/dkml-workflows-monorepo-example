@@ -1,3 +1,4 @@
+open Dune_engine
 open Import
 
 type t =
@@ -17,7 +18,13 @@ let to_string = function
     sprintf "exe-%s-%s" name Digest.(generic names |> to_string)
   | Exes [] -> assert false
 
+let merlin_exist_name = ".merlin-exist"
+
 let merlin_folder_name = ".merlin-conf"
+
+let merlin_exists_path path ident =
+  String.concat ~sep:"-" [ merlin_exist_name; to_string ident ]
+  |> Path.Build.relative path
 
 let merlin_file_path path ident =
   Filename.concat merlin_folder_name (to_string ident)

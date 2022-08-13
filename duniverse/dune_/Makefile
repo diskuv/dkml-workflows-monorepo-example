@@ -9,26 +9,23 @@ BIN := ./dune.exe
 # Dependencies used for testing dune, when developed locally and
 # when tested in CI
 TEST_DEPS := \
-lwt \
 bisect_ppx \
 cinaps \
 coq-native \
-"coq>=8.14.0" \
+"coq>=8.12.1" \
 core_bench \
 "csexp>=1.3.0" \
 js_of_ocaml \
 js_of_ocaml-compiler \
-"mdx>=2.1.0" \
+mdx \
 menhir \
-"merlin>=3.4.0" \
 ocamlfind \
-ocamlformat.$$(awk -F = '$$1 == "version" {print $$2}' .ocamlformat) \
-"odoc>=2.0.1" \
-"ppx_expect.v0.15.0" \
+ocamlformat.0.17.0 \
+"odoc>=1.5.0" \
+"ppx_expect>=v0.14" \
 ppx_inline_test \
 ppxlib \
 result \
-ctypes \
 "utop>=2.6.0"
 
 # Dependencies recommended for developing dune locally,
@@ -36,20 +33,16 @@ ctypes \
 DEV_DEPS := \
 patdiff
 
-TEST_OCAMLVERSION := 4.14.0
-
 -include Makefile.dev
 
-.PHONY: help
 help:
 	@cat doc/make-help.txt
 
-.PHONY: release
 release: $(BIN)
-	@$(BIN) build -p dune --profile dune-bootstrap
+	$(BIN) build -p dune --profile dune-bootstrap
 
 dune.exe: bootstrap.ml boot/libs.ml boot/duneboot.ml
-	@ocaml bootstrap.ml
+	ocaml bootstrap.ml
 
 dev: $(BIN)
 	$(BIN) build @install
@@ -57,32 +50,24 @@ dev: $(BIN)
 all: $(BIN)
 	$(BIN) build
 
-.PHONY: install
 install:
 	$(BIN) install $(INSTALL_ARGS) dune
 
-.PHONY: uninstall
 uninstall:
 	$(BIN) uninstall $(INSTALL_ARGS) dune
 
-.PHONY: reinstall
 reinstall: uninstall install
-
-install-ocamlformat:
-	opam install -y ocamlformat.$$(awk -F = '$$1 == "version" {print $$2}' .ocamlformat)
 
 dev-deps:
 	opam install -y $(TEST_DEPS)
 
-.PHONY: dev-switch
 dev-switch:
 	opam update
 # Ensuring that either a dev switch already exists or a new one is created
-	test "$(shell opam switch show)" = "$(shell pwd)" || \
-		opam switch create -y . $(TEST_OCAMLVERSION) --deps-only --with-test
-	opam install -y --update-invariant ocaml.$(TEST_OCAMLVERSION) $(TEST_DEPS) $(DEV_DEPS)
+	[[ $(shell opam switch show) == $(shell pwd) ]] || \
+		opam switch create -y . 4.10.0 --deps-only --with-test
+	opam install -y $(TEST_DEPS) $(DEV_DEPS)
 
-.PHONY: test
 test: $(BIN)
 	$(BIN) runtest
 
@@ -98,25 +83,20 @@ test-coq: $(BIN)
 test-all: $(BIN)
 	$(BIN) build @runtest @runtest-js @runtest-coq
 
-.PHONY: check
 check: $(BIN)
 	$(BIN) build @check
 
-.PHONY: fmt
 fmt: $(BIN)
-	$(BIN) fmt
+	$(BIN) build @fmt --auto-promote
 
-.PHONY: promote
 promote: $(BIN)
 	$(BIN) promote
 
-.PHONY: accept-corrections
 accept-corrections: promote
 
 all-supported-ocaml-versions: $(BIN)
 	$(BIN) build @install @runtest --workspace dune-workspace.dev --root .
 
-.PHONY: clean
 clean: $(BIN)
 	$(BIN) clean || true
 	rm -rf _boot dune.exe
@@ -124,14 +104,12 @@ clean: $(BIN)
 distclean: clean
 	rm -f src/dune_rules/setup.ml
 
-.PHONY: doc
 doc:
-	sphinx-build doc doc/_build
+	cd doc && sphinx-build . _build
 
-# livedoc-deps: you may need to [pip3 install sphinx-autobuild] and [pip3 install sphinx-rtd-theme]
 livedoc:
 	cd doc && sphinx-autobuild . _build \
-	  --port 8888 -q  --host $(shell hostname) --re-ignore '\.#.*'
+	  -p 8888 -q  --host $(shell hostname) -r '\.#.*'
 
 update-jbuilds: $(BIN)
 	$(BIN) build @doc/runtest --auto-promote
@@ -144,29 +122,21 @@ ifeq (dune,$(firstword $(MAKECMDGOALS)))
   $(eval $(RUN_ARGS):;@:)
 endif
 
-.PHONY: bench
-bench: release
-	@$(BIN) exec -- ./bench/bench.exe _build/default/dune.exe
-
-.PHONY: dune
 dune: $(BIN)
 	$(BIN) $(RUN_ARGS)
 
+.PHONY: default install uninstall reinstall clean test doc dev-switch
+.PHONY: promote accept-corrections release opam-release dune check fmt
+
 # Use this target to make sure that we always run the in source dune when making
 # the release
-.PHONY: opam-release
 opam-release: dev
 	$(BIN) exec -- $(MAKE) dune-release
 
 dune-release:
 	dune-release tag
-	dune-release distrib --skip-build --skip-lint --skip-tests
+	dune-release distrib --skip-build --skip-lint --skip-tests -n dune
 # See https://github.com/ocamllabs/dune-release/issues/206
-	DUNE_RELEASE_DELEGATE=github-dune-release-delegate dune-release publish distrib --verbose
-	dune-release opam pkg
-	dune-release opam submit
-
-# see nix/default.nix for details
-.PHONY: nix/opam-selection.nix
-nix/opam-selection.nix: Makefile
-	nix-shell -A resolve ./
+	DUNE_RELEASE_DELEGATE=github-dune-release-delegate dune-release publish distrib --verbose -n dune
+	dune-release opam pkg -n dune
+	dune-release opam submit -n dune

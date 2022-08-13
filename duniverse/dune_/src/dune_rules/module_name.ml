@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 let valid_format_doc = Section.valid_format_doc
 
@@ -13,8 +14,6 @@ include Section.Modulelike (struct
 
   let make s = String.capitalize s
 end)
-
-let equal = String.equal
 
 let compare = String.compare
 
@@ -31,11 +30,9 @@ module Set = struct
 end
 
 module Map = String.Map
-module Map_traversals = Memo.Make_map_traversals (Map)
 module Infix = Comparator.Operators (String)
 
-let of_local_lib_name (loc, s) =
-  parse_string_exn (loc, Lib_name.Local.to_string s)
+let of_local_lib_name s = of_string (Lib_name.Local.to_string s)
 
 let to_local_lib_name s = Lib_name.Local.of_string s
 

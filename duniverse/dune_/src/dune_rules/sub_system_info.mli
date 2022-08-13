@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 (** The type of all kind of sub-system information. This type is what we get
     just after parsing a [dune] file. *)
@@ -30,7 +31,7 @@ module type S = sig
   val encode : t -> Dune_lang.Syntax.Version.t * Dune_lang.t list
 end
 
-module Register (_ : S) : sig end
+module Register (M : S) : sig end
 
 val record_parser :
      unit
@@ -39,5 +40,3 @@ val record_parser :
      Dune_lang.Decoder.parser
 
 val get : Sub_system_name.t -> (module S)
-
-val equal : t -> t -> bool

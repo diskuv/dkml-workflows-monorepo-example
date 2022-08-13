@@ -20,7 +20,13 @@
  (synopsis "An example for you")
  (description
   "An example of using dkml-workflows to build on multiple platform, including Windows with Visual Studio and Linux with an old C library.")
- (depends dkml-base-compiler dune diskuvbox conf-dkml-cross-toolchain)
+ (depends
+  dkml-base-compiler
+  (dune
+  ; This is a pin of setup-dkml.
+   (= 2.9.3))
+  diskuvbox
+  conf-dkml-cross-toolchain)
  (tags
   (topics "to describe" your project)))
 

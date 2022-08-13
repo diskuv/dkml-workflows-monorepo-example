@@ -1,3 +1,4 @@
+open! Stdune
 open Import
 open Dune_lang.Decoder
 
@@ -10,7 +11,7 @@ let syntax =
     ]
 
 module Language = struct
-  module T = struct
+  module Key = struct
     type t =
       | Dialect of string
       | Dune
@@ -23,14 +24,15 @@ module Language = struct
       | Dialect s1, Dialect s2 -> String.compare s1 s2
 
     let to_dyn =
-      let open Dyn in
+      let open Dyn.Encoder in
       function
-      | Dialect name -> variant "dialect" [ string name ]
-      | Dune -> variant "dune" []
+      | Dialect name -> constr "dialect" [ string name ]
+      | Dune -> constr "dune" []
   end
 
-  include Comparable.Make (T)
-  include T
+  module Map = Map.Make (Key)
+  module Set = Set.Make (Key) (Map)
+  include Key
 
   let of_string = function
     | "dune" -> Dune
@@ -53,9 +55,9 @@ module Enabled_for = struct
     | All
 
   let to_dyn =
-    let open Dyn in
+    let open Dyn.Encoder in
     function
-    | Only l -> variant "only" [ Language.Set.to_dyn l ]
+    | Only l -> constr "only" [ Language.Set.to_dyn l ]
     | All -> string "all"
 
   let includes t =
@@ -94,7 +96,7 @@ type t = Enabled_for.t generic_t
 let includes t lang = Enabled_for.includes t.enabled_for lang
 
 let to_dyn { enabled_for; loc = _ } =
-  let open Dyn in
+  let open Dyn.Encoder in
   record [ ("enabled_for", Enabled_for.to_dyn enabled_for) ]
 
 let dparse_args =
@@ -123,8 +125,7 @@ let disabled =
   { loc = Loc.none; enabled_for = Enabled_for.Only Language.Set.empty }
 
 let field ~since =
-  field_o "formatting"
-    (Dune_lang.Syntax.since Dune_lang.Stanza.syntax since >>> dune2_dec)
+  field_o "formatting" (Dune_lang.Syntax.since Stanza.syntax since >>> dune2_dec)
 
 let is_empty = function
   | { enabled_for = Enabled_for.Only l; _ } -> Language.Set.is_empty l
@@ -149,15 +150,14 @@ let to_explicit { loc; enabled_for } =
   | Enabled_for.All -> None
   | Only l -> Some { loc; enabled_for = l }
 
-let encode_opt t =
-  to_explicit t |> Option.map ~f:(fun c -> encode_explicit c.enabled_for)
-
 let of_config ~ext ~dune_lang ~version =
   let dune2 = version >= (2, 0) in
   match (ext, dune_lang, dune2) with
   | None, None, true -> enabled_for_all
   | None, None, false -> disabled
-  | Some x, None, false | None, Some x, true -> x
+  | Some x, None, false
+  | None, Some x, true ->
+    x
   | _, Some _, false ->
     Code_error.raise "(formatting ...) stanza requires version 2.0" []
   | Some ext, _, true ->
@@ -174,6 +174,6 @@ let of_config ~ext ~dune_lang ~version =
     User_error.raise ~loc:ext.loc
       (Pp.textf
          "Starting with (lang dune 2.0), formatting is enabled by default."
-      :: suggestion)
+       :: suggestion)
 
 let equal { enabled_for; _ } t = Enabled_for.equal enabled_for t.enabled_for

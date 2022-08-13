@@ -1,3 +1,4 @@
+open! Stdune
 open Import
 
 type t =
@@ -10,11 +11,11 @@ type t =
 let is_cram_suffix = String.is_suffix ~suffix:".t"
 
 let dyn_of_t =
-  let open Dyn in
+  let open Dyn.Encoder in
   function
-  | File f -> variant "File" [ Path.Source.to_dyn f ]
+  | File f -> constr "File" [ Path.Source.to_dyn f ]
   | Dir { file; dir } ->
-    variant "Dir"
+    constr "Dir"
       [ record
           [ ("file", Path.Source.to_dyn file); ("dir", Path.Source.to_dyn dir) ]
       ]
@@ -30,5 +31,3 @@ let script t =
   match t with
   | File f -> f
   | Dir d -> d.file
-
-let fname_in_dir_test = "run.t"

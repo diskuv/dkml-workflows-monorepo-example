@@ -25,4 +25,5 @@ when we 'chdir' into different directory.
 
   $ cp ./bin/foo.exe ./some_dir
   $ dune runtest
+           foo alias runtest
   Hello from some_dependency!

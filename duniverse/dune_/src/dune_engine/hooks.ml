@@ -1,4 +1,4 @@
-open Import
+open Stdune
 
 module type S = sig
   val always : (unit -> unit) -> unit
@@ -32,7 +32,7 @@ module Make () = struct
     | [] -> ()
     | exns ->
       let exns = List.rev exns in
-      let open Dyn in
+      let open Dyn.Encoder in
       Code_error.raise "hooks failed"
         [ ("exns", (list Exn_with_backtrace.to_dyn) exns) ]
 end

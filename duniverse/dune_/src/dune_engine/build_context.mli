@@ -3,12 +3,23 @@
 
    This name could probably be chosen to be a bit more informative. *)
 
-open Import
+open! Stdune
+open! Import
 
 type t = private
   { name : Context_name.t
   ; build_dir : Path.Build.t
-  ; host : Context_name.t option
+  ; env : Env.t
+  ; host : t option
+  ; stdlib_dir : Path.t
+  ; default_ocamlpath : Path.t list
   }
 
-val create : name:Context_name.t -> host:Context_name.t option -> t
+val create :
+     name:Context_name.t
+  -> build_dir:Path.Build.t
+  -> env:Env.t
+  -> host:t option
+  -> stdlib_dir:Path.t
+  -> default_ocamlpath:Path.t list
+  -> t

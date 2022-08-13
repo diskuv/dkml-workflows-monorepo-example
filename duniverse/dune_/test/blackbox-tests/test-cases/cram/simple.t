@@ -9,7 +9,7 @@ Multiline commands
   Multiline
   Text
 
-The environment is preserved across phrases
+The environment is preserved accross phrases
 
   $ TOTO=hello
   $ echo $TOTO

@@ -1,3 +1,5 @@
+open! Dune_engine
+open! Stdune
 open Import
 open Dune_lang.Decoder
 
@@ -25,7 +27,7 @@ type t =
   ; alias : Alias.Name.t option
   ; deps : Dep_conf.t Bindings.t option
   ; enabled_if : Blang.t
-  ; locks : Locks.t
+  ; locks : String_with_vars.t list
   ; package : Package.t option
   }
 
@@ -38,7 +40,10 @@ let decode =
      and+ deps = field_o "deps" (Bindings.decode Dep_conf.decode)
      and+ enabled_if = Enabled_if.decode ~allowed_vars:Any ~since:None ()
      and+ locks =
-       Locks.field ~check:(Dune_lang.Syntax.since Stanza.syntax (2, 9)) ()
+       field "locks"
+         (Dune_lang.Syntax.since Stanza.syntax (2, 9)
+         >>> repeat String_with_vars.decode)
+         ~default:[]
      and+ package =
        Stanza_common.Pkg.field_opt
          ~check:(Dune_lang.Syntax.since Stanza.syntax (2, 8))

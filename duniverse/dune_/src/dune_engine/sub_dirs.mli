@@ -1,4 +1,4 @@
-open Import
+open Stdune
 
 module Status : sig
   type t =
@@ -69,8 +69,4 @@ module Dir_map : sig
   val root : t -> per_dir
 end
 
-type decoder =
-  { decode : 'a. Dune_lang.Ast.t list -> 'a Dune_lang.Decoder.t -> 'a }
-
-val decode :
-  file:Path.Source.t -> decoder -> Dune_lang.Ast.t list -> Dir_map.t Memo.t
+val decode : file:Path.Source.t -> Dir_map.t Dune_lang.Decoder.t

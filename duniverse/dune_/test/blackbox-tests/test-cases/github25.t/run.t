@@ -15,7 +15,5 @@ We need ocamlfind to run this test
   Error: Library "une-lib-qui-nexiste-pas" not found.
   -> required by library "plop.ca-marche-pas" in
      .../plop
-  -> required by _build/default/root/META.pas-de-bol
-  -> required by _build/install/default/lib/pas-de-bol/META
-  -> required by _build/default/root/pas-de-bol.install
-  -> required by alias root/install
+  Hint: try:
+    dune external-lib-deps --missing --only pas-de-bol @install

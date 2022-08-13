@@ -1,6 +1,5 @@
 open Stdune
 open Dune_tests_common
-open Memo.O
 
 let () = init ()
 
@@ -68,31 +67,26 @@ module Scheme = struct
   let collect_rules_simple =
     let rec go (t : _ t) ~dir =
       match t with
-      | Empty -> Memo.return Directory_rules.empty
-      | Union (a, b) ->
-        let+ a = go a ~dir
-        and+ b = go b ~dir in
-        Directory_rules.union a b
+      | Empty -> Directory_rules.empty
+      | Union (a, b) -> Directory_rules.union (go a ~dir) (go b ~dir)
       | Approximation (dirs, t) -> (
         match Dune_engine.Dir_set.mem dirs dir with
         | true -> go t ~dir
-        | false -> Memo.return Directory_rules.empty)
-      | Finite rules ->
-        Memo.return
-          (match Path.Build.Map.find rules dir with
-          | None -> Directory_rules.empty
-          | Some rule -> rule)
-      | Thunk f ->
-        let* t = f () in
-        go t ~dir
+        | false -> Directory_rules.empty)
+      | Finite rules -> (
+        match Path.Build.Map.find rules dir with
+        | None -> Directory_rules.empty
+        | Some rule -> rule)
+      | Thunk f -> go (f ()) ~dir
     in
     go
 
   let evaluate = evaluate ~union:Directory_rules.union
 
   let get_rules t ~dir =
-    let+ rules, _ = Evaluated.get_rules t ~dir in
-    Option.value rules ~default:Directory_rules.empty
+    Option.value
+      (fst (Evaluated.get_rules t ~dir))
+      ~default:Directory_rules.empty
 end
 
 module Dir_set = Dune_engine.Dir_set
@@ -113,22 +107,24 @@ let record_calls scheme ~f =
   let scheme =
     Scheme.instrument ~print:(fun s -> calls := s :: !calls) scheme
   in
-  let+ res = f scheme in
+  let res = f scheme in
   (Directory_rules.force res, !calls)
 
 let print_rules scheme ~dir =
-  let* res1, calls1 =
+  let res1, calls1 =
     record_calls scheme ~f:(Scheme.collect_rules_simple ~dir)
   in
-  let+ res2, calls2 =
+  let res2, calls2 =
     record_calls scheme ~f:(fun scheme ->
-        Scheme.evaluate scheme >>= Scheme.get_rules ~dir)
+        Scheme.get_rules (Scheme.evaluate scheme) ~dir)
   in
   if not ((res1 : string list) = res2) then
     Code_error.raise
       "Naive [collect_rules_simple] gives result inconsistent with \
        [Scheme.evaluate]"
-      [ ("res1", Dyn.(list string) res1); ("res2", Dyn.(list string) res2) ]
+      [ ("res1", Dyn.Encoder.(list string) res1)
+      ; ("res2", Dyn.Encoder.(list string) res2)
+      ]
   else
     let print_log log =
       let log =
@@ -142,22 +138,19 @@ let print_rules scheme ~dir =
       print "inconsistent laziness behavior:";
       print "naive calls:";
       print_log calls1;
-      print "[evaluate] calls:";
-      print_log calls2)
-    else (
+      print "[evalulate] calls:";
+      print_log calls2
+    ) else (
       print "calls:";
-      print_log calls1);
+      print_log calls1
+    );
     print "rules:";
     print_log res1
-
-let run m = Fiber.run (Memo.run m) ~iter:(fun () -> assert false)
-
-let print_rules scheme ~dir = run @@ print_rules scheme ~dir
 
 open Dune_rules.Scheme
 
 let%expect_test _ =
-  let scheme = Scheme.Thunk (fun () -> Memo.return Scheme.Empty) in
+  let scheme = Scheme.Thunk (fun () -> Scheme.Empty) in
   print_rules scheme ~dir:(Path.of_string "foo/bar");
   [%expect {|
 calls:
@@ -169,7 +162,7 @@ rules:
 let scheme_all_but_foo_bar =
   Scheme.Approximation
     ( Dir_set.negate (Dir_set.subtree (Path.of_string "foo/bar"))
-    , Thunk (fun () -> Memo.return Empty) )
+    , Thunk (fun () -> Empty) )
 
 let%expect_test _ =
   print_rules scheme_all_but_foo_bar ~dir:(Path.of_string "unrelated/dir");
@@ -187,7 +180,7 @@ let%expect_test _ =
 inconsistent laziness behavior:
 naive calls:
     <none>
-[evaluate] calls:
+[evalulate] calls:
     t:thunk
 rules:
     <none>
@@ -200,7 +193,7 @@ let%expect_test _ =
 inconsistent laziness behavior:
 naive calls:
     <none>
-[evaluate] calls:
+[evalulate] calls:
     t:thunk
 rules:
     <none>

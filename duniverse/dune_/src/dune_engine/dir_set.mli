@@ -1,6 +1,6 @@
 (** Potentially infinite sets of directories *)
 
-open Import
+open! Stdune
 
 (** Type of potentially infinite sets of directories. Not all sets can be
     represented, only ones that can be efficiently inspected. *)
@@ -20,9 +20,7 @@ val universal : 'w t
 
 (** [trivial b] is such that for all path [p]:
 
-    {[
-      mem (trivial b) p = b
-    ]}
+    {[ mem (trivial b) p = b ]}
 
     i.e. [trivial false] is [empty] and [trivial true] is [universal]. *)
 val trivial : bool -> 'w t

@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open! Stdune
 open Dune_file
 
 val foreign_rules :
@@ -7,7 +8,7 @@ val foreign_rules :
   -> expander:Expander.t
   -> dir:Path.Build.t
   -> dir_contents:Dir_contents.t
-  -> unit Memo.t
+  -> unit
 
 val rules :
      Library.t
@@ -16,4 +17,4 @@ val rules :
   -> dir:Path.Build.t
   -> expander:Expander.t
   -> scope:Scope.t
-  -> (Compilation_context.t * Merlin.t) Memo.t
+  -> Compilation_context.t * Merlin.t

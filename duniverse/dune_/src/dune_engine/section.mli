@@ -1,6 +1,6 @@
 open Import
 
-type t = Dune_section.t =
+type t =
   | Lib
   | Lib_root
   | Libexec
@@ -18,7 +18,7 @@ type t = Dune_section.t =
 
 val compare : t -> t -> Ordering.t
 
-include Comparable_intf.S with type key := t
+include Comparable_intf.S with type Key.t = t
 
 val enum_decoder : (string * t) list
 
@@ -43,7 +43,7 @@ val should_set_executable_bit : t -> bool
 module Site : sig
   type t
 
-  include Comparable_intf.S with type key := t
+  include Interned_intf.S with type t := t
 
   include Dune_lang.Conv.S with type t := t
 

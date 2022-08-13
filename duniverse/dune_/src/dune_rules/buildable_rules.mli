@@ -1,6 +1,7 @@
 (** Rules and helpers shared by OCaml libraries and executables *)
+open! Dune_engine
 
-open Import
+open Stdune
 
 (** Make sure all rules produces by [f] record the library dependencies for
     [dune external-lib-deps] and depend on the generation of the .merlin file.
@@ -11,23 +12,8 @@ open Import
     doesn't happen by mistake. *)
 
 val gen_select_rules :
-  Super_context.t -> dir:Path.Build.t -> Lib.Compile.t -> unit Memo.t
+  Super_context.t -> dir:Path.Build.t -> Lib.Compile.t -> unit
 
 (** Generate the rules for the [(select ...)] forms in library dependencies *)
 val with_lib_deps :
-     Context.t
-  -> Lib.Compile.t
-  -> dir:Path.Build.t
-  -> f:(unit -> 'a Memo.t)
-  -> 'a Memo.t
-
-val modules_rules :
-     Super_context.t
-  -> Dune_file.Buildable.t
-  -> Expander.t
-  -> dir:Path.Build.t
-  -> Scope.t
-  -> Modules.t
-  -> lib_name:Lib_name.Local.t option
-  -> empty_intf_modules:[ `Exe_mains of (Loc.t * string) list | `Lib ]
-  -> (Modules.t * Pp_spec.t) Memo.t
+  Context.t -> Lib.Compile.t -> dir:Path.Build.t -> f:(unit -> 'a) -> 'a

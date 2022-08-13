@@ -54,8 +54,8 @@ let is_inline_test = function
   | _ -> true
 
 let to_dyn =
-  let open Dyn in
+  let open Dyn.Encoder in
   function
-  | Dev -> variant "Dev" []
-  | Release -> variant "Release" []
-  | User_defined s -> variant "User_defined" [ string s ]
+  | Dev -> constr "Dyn" []
+  | Release -> constr "Release" []
+  | User_defined s -> constr "User_defined" [ string s ]

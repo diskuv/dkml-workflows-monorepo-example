@@ -9,13 +9,7 @@ module Name : sig
 
   val version_fn : t -> string
 
-  val compare : t -> t -> Ordering.t
-
-  val equal : t -> t -> bool
-
-  val hash : t -> int
-
-  include Comparable_intf.S with type key := t
+  include Interned_intf.S with type t := t
 
   include Dune_lang.Conv.S with type t := t
 
@@ -24,12 +18,6 @@ module Name : sig
   include Stringlike_intf.S with type t := t
 
   val of_opam_file_basename : string -> t option
-
-  module Map_traversals : sig
-    val parallel_iter : 'a Map.t -> f:(t -> 'a -> unit Memo.t) -> unit Memo.t
-
-    val parallel_map : 'a Map.t -> f:(t -> 'a -> 'b Memo.t) -> 'b Map.t Memo.t
-  end
 end
 
 module Id : sig
@@ -37,7 +25,9 @@ module Id : sig
 
   val name : t -> Name.t
 
-  include Comparable_intf.S with type key := t
+  module Set : Set.S with type elt = t
+
+  module Map : Map.S with type key = t
 end
 
 module Dependency : sig
@@ -84,7 +74,6 @@ module Source_kind : sig
       | Github
       | Bitbucket
       | Gitlab
-      | Sourcehut
 
     type t =
       { user : string
@@ -99,7 +88,7 @@ module Source_kind : sig
     | Host of Host.t
     | Url of string
 
-  val to_dyn : t Dyn.builder
+  val to_dyn : t Dyn.Encoder.t
 
   val to_string : t -> string
 
@@ -111,7 +100,7 @@ module Info : sig
 
   val source : t -> Source_kind.t option
 
-  val license : t -> string list option
+  val license : t -> string option
 
   val authors : t -> string list option
 
@@ -123,14 +112,9 @@ module Info : sig
 
   val maintainers : t -> string list option
 
-  (** example package info (used for project initialization ) *)
-  val example : t
-
   val empty : t
 
-  val to_dyn : t Dyn.builder
-
-  val encode_fields : t -> Dune_lang.t list
+  val to_dyn : t Dyn.Encoder.t
 
   val decode :
        ?since:Dune_lang.Syntax.Version.t
@@ -154,18 +138,13 @@ type t =
   ; tags : string list
   ; deprecated_package_names : Loc.t Name.Map.t
   ; sites : Section.t Section.Site.Map.t
-  ; allow_empty : bool
   }
-
-val equal : t -> t -> bool
 
 val name : t -> Name.t
 
 val dir : t -> Path.Source.t
 
 val file : dir:Path.t -> name:Name.t -> Path.t
-
-val encode : Name.t -> t Dune_lang.Encoder.t
 
 val decode : dir:Path.Source.t -> t Dune_lang.Decoder.t
 
@@ -181,10 +160,7 @@ val hash : t -> int
 
 val is_opam_file : Path.t -> bool
 
-(** Construct a default package (e.g., for project initialization) *)
-val default : string -> Path.Source.t -> t
-
 (** Construct a package description from an opam file. *)
-val load_opam_file : Path.Source.t -> Name.t -> t Memo.t
+val load_opam_file : Path.Source.t -> Name.t -> t
 
 val missing_deps : t -> effective_deps:Name.Set.t -> Name.Set.t

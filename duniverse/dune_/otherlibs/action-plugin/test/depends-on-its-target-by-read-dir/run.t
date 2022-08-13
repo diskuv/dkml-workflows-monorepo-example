@@ -13,7 +13,7 @@
   $ cp ./bin/foo.exe ./
 
   $ dune build some_file
-  Error: Dependency cycle between:
+  Error: Dependency cycle between the following files:
      _build/default/some_file
   [1]
 

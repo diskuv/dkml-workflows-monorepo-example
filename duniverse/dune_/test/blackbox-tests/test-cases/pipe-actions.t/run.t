@@ -33,6 +33,7 @@ You need to set the language to 2.7 or higher for it to work:
   > EOF
 
   $ dune build @pipe
+            tr alias pipe
   x
   y
   z
@@ -43,6 +44,7 @@ The makefile version of pipe actions uses actual pipes:
   $ cat >dune <<EOF
   > (executables
   >  (public_names a b c))
+  > 
   > (rule
   >  (alias pipe)
   >  (action
@@ -50,7 +52,7 @@ The makefile version of pipe actions uses actual pipes:
   >    (pipe-outputs (run a) (run b) (run c)))))
   > EOF
 
-  $ dune rules -m target
+  $ dune rule -m target
   _build/default/target: _build/install/default/bin/a \
     _build/install/default/bin/b _build/install/default/bin/c
   	mkdir -p _build/default; \
@@ -58,12 +60,13 @@ The makefile version of pipe actions uses actual pipes:
   	cd _build/default; \
   	../install/default/bin/a  2>&1 |  \
   	  ../install/default/bin/b | ../install/default/bin/c  &> target
-
+  
   $ cat >dune <<EOF
   > (executable
   >  (public_name apl) (name append_to_line) (modules append_to_line))
   > (executable
   >  (public_name echo-outputs) (name echo_outputs) (modules echo_outputs))
+  > 
   > (rule
   >  (action
   >   (with-stderr-to target-stdout.stderr

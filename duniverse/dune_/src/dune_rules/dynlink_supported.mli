@@ -1,4 +1,5 @@
 (** Track whether dynamic loading of code is supported *)
+open! Dune_engine
 
 module By_the_os : sig
   type t

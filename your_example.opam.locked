@@ -17,9 +17,9 @@ depends: [
   "csexp" {= "1.5.1" & ?vendor}
   "diskuvbox" {= "0.1.0" & ?vendor}
   "dkml-base-compiler" {= "4.12.1~v1.0.0"}
-  "dune" {= "3.4.1"}
-  "dune-build-info" {= "3.4.1" & ?vendor}
-  "dune-configurator" {= "3.4.1" & ?vendor}
+  "dune" {= "2.9.3"}
+  "dune-build-info" {= "2.9.3" & ?vendor}
+  "dune-configurator" {= "2.9.3" & ?vendor}
   "either" {= "1.0.0" & ?vendor}
   "findlib" {= "1.8.1+dune" & ?vendor}
   "fix" {= "20220121" & ?vendor}
@@ -95,12 +95,12 @@ pin-depends: [
     "https://github.com/diskuv/diskuvbox/archive/0.1.0.tar.gz"
   ]
   [
-    "dune-build-info.3.4.1"
-    "https://github.com/ocaml/dune/releases/download/3.4.1/dune-3.4.1.tbz"
+    "dune-build-info.2.9.3"
+    "https://github.com/ocaml/dune/releases/download/2.9.3/dune-site-2.9.3.tbz"
   ]
   [
-    "dune-configurator.3.4.1"
-    "https://github.com/ocaml/dune/releases/download/3.4.1/dune-3.4.1.tbz"
+    "dune-configurator.2.9.3"
+    "https://github.com/ocaml/dune/releases/download/2.9.3/dune-site-2.9.3.tbz"
   ]
   [
     "either.1.0.0"
@@ -450,11 +450,11 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
-    "https://github.com/ocaml/dune/releases/download/3.4.1/dune-3.4.1.tbz"
+    "https://github.com/ocaml/dune/releases/download/2.9.3/dune-site-2.9.3.tbz"
     "dune_"
     [
-      "sha256=299fa33cffc108cc26ff59d5fc9d09f6cb0ab3ac280bf23a0114cfdc0b40c6c5"
-      "sha512=cb425d08c989fd27e1a87a6c72f37494866b508b0fe4ec05070adad995a99710b223a9047b6649776f63943dafb61903eefe4d5efde4c439103a89e2d6ff5337"
+      "sha256=3e65ec73ab2c80d50d4ffd6c46cbfb22eacd0e5587a4be8af8ae69547d5f88d6"
+      "sha512=04b48501ac16c3608e3b6bfbdbabf810df0fb844ea3b7d25ba50f03b9d6cb1d2c933cf747d694029d82a9777a774e48e5c38ab010fe53ce1eae367da0ed04d6d"
     ]
   ]
   [

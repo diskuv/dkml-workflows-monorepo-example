@@ -10,8 +10,6 @@ include Stringlike_intf.S with type t := t
 
 val add_suffix : t -> string -> t
 
-val equal : t -> t -> bool
-
 val compare : t -> t -> Ordering.t
 
 val uncapitalize : t -> string
@@ -26,7 +24,7 @@ end
 
 module Infix : Comparator.OPS with type t = t
 
-val of_local_lib_name : Loc.t * Lib_name.Local.t -> t
+val of_local_lib_name : Lib_name.Local.t -> t
 
 val to_local_lib_name : t -> Lib_name.Local.t
 
@@ -61,18 +59,20 @@ module Unique : sig
 
   include Dune_lang.Conv.S with type t := t
 
-  include Comparable_intf.S with type key := t
+  module Map : Map.S with type key = t
+
+  module Set : Set.S with type elt = t
 end
 with type name := t
 
 val wrap : t -> with_:t -> Unique.t
 
-include Comparable_intf.S with type key := t
+module Map : Map.S with type key = t
 
-module Map_traversals : sig
-  val parallel_iter : 'a Map.t -> f:(t -> 'a -> unit Memo.t) -> unit Memo.t
+module Set : sig
+  include Set.S with type elt = t
 
-  val parallel_map : 'a Map.t -> f:(t -> 'a -> 'b Memo.t) -> 'b Map.t Memo.t
+  val to_dyn : t -> Dyn.t
 end
 
 val of_string_allow_invalid : Loc.t * string -> t

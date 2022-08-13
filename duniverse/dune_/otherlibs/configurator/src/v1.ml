@@ -5,13 +5,13 @@ let die = die
 type t =
   { name : string
   ; dest_dir : string
+  ; ocamlc : string
   ; log : string -> unit
   ; mutable counter : int
   ; ext_obj : string
   ; c_compiler : string
   ; stdlib_dir : string
   ; ccomp_type : string
-  ; c_libraries : string list
   ; ocamlc_config : Ocaml_config.Vars.t
   ; ocamlc_config_cmd : string
   }
@@ -19,7 +19,10 @@ type t =
 let rec rm_rf dir =
   Array.iter (Sys.readdir dir) ~f:(fun fn ->
       let fn = dir ^/ fn in
-      if Sys.is_directory fn then rm_rf fn else Unix.unlink fn);
+      if Sys.is_directory fn then
+        rm_rf fn
+      else
+        Unix.unlink fn);
   Unix.rmdir dir
 
 module Temp = struct
@@ -65,23 +68,35 @@ module Flags = struct
 end
 
 module Find_in_path = struct
-  let path_sep = if Sys.win32 then ';' else ':'
+  let path_sep =
+    if Sys.win32 then
+      ';'
+    else
+      ':'
 
   let get_path () =
     match Sys.getenv "PATH" with
     | exception Not_found -> []
     | s -> String.split s ~on:path_sep
 
-  let exe = if Sys.win32 then ".exe" else ""
+  let exe =
+    if Sys.win32 then
+      ".exe"
+    else
+      ""
 
   let prog_not_found prog = die "Program %s not found in PATH" prog
 
   let best_prog dir prog =
     let fn = dir ^/ prog ^ ".opt" ^ exe in
-    if Sys.file_exists fn then Some fn
+    if Sys.file_exists fn then
+      Some fn
     else
       let fn = dir ^/ prog ^ exe in
-      if Sys.file_exists fn then Some fn else None
+      if Sys.file_exists fn then
+        Some fn
+      else
+        None
 
   let find_ocaml_prog prog =
     match List.find_map (get_path ()) ~f:(fun dir -> best_prog dir prog) with
@@ -103,12 +118,16 @@ let gen_id t =
 
 let quote_if_needed =
   let need_quote = function
-    | ' ' | '\"' -> true
+    | ' '
+    | '\"' ->
+      true
     | _ -> false
   in
   fun s ->
-    if String.is_empty s || String.exists ~f:need_quote s then Filename.quote s
-    else s
+    if String.is_empty s || String.exists ~f:need_quote s then
+      Filename.quote s
+    else
+      s
 
 module Process = struct
   type result =
@@ -210,10 +229,12 @@ module Process = struct
 
   let run_command_capture_exn t ?dir ?env cmd =
     let { exit_code; stdout; stderr } = run_command t ?dir ?env cmd in
-    if exit_code <> 0 then die "command exited with code %d: %s" exit_code cmd
+    if exit_code <> 0 then
+      die "command exited with code %d: %s" exit_code cmd
     else if not (String.is_empty stderr) then
       die "command has non-empty stderr: %s" cmd
-    else stdout
+    else
+      stdout
 
   let run_command_ok t ?dir ?env cmd =
     (run_command t ?dir ?env cmd).exit_code = 0
@@ -289,21 +310,16 @@ let read_dot_dune_configurator_file ~build_dir =
 
 let fill_in_fields_that_depends_on_ocamlc_config t =
   let get = ocaml_config_var_exn t in
-  let get_flags var =
-    get var |> String.trim |> Flags.extract_blank_separated_words
-  in
-  let c_compiler, c_libraries =
+  let c_compiler =
     match Ocaml_config.Vars.find t.ocamlc_config "c_compiler" with
-    | Some c_comp ->
-      (c_comp ^ " " ^ get "ocamlc_cflags", get_flags "native_c_libraries")
-    | None -> (get "bytecomp_c_compiler", get_flags "bytecomp_c_libraries")
+    | Some c_comp -> c_comp ^ " " ^ get "ocamlc_cflags"
+    | None -> get "bytecomp_c_compiler"
   in
   { t with
     ext_obj = get "ext_obj"
   ; c_compiler
   ; stdlib_dir = get "standard_library"
   ; ccomp_type = get "ccomp_type"
-  ; c_libraries
   }
 
 let create_from_inside_dune ~dest_dir ~log ~build_dir ~name =
@@ -318,6 +334,7 @@ let create_from_inside_dune ~dest_dir ~log ~build_dir ~name =
   let ocamlc_config_cmd = Process.command_line ocamlc [ "-config" ] in
   fill_in_fields_that_depends_on_ocamlc_config
     { name
+    ; ocamlc
     ; log
     ; dest_dir
     ; counter = 0
@@ -327,16 +344,10 @@ let create_from_inside_dune ~dest_dir ~log ~build_dir ~name =
     ; c_compiler = ""
     ; stdlib_dir = ""
     ; ccomp_type = ""
-    ; c_libraries = []
     }
 
 let create ?dest_dir ?ocamlc ?(log = ignore) name =
-  let inside_dune =
-    match Sys.getenv "INSIDE_DUNE" with
-    | exception Not_found -> None
-    | n -> Some n
-  in
-  match (ocamlc, inside_dune) with
+  match (ocamlc, Option.try_with (fun () -> Sys.getenv "INSIDE_DUNE")) with
   | None, Some build_dir when build_dir <> "1" ->
     create_from_inside_dune ~dest_dir ~log ~build_dir ~name
   | _ ->
@@ -353,6 +364,7 @@ let create ?dest_dir ?ocamlc ?(log = ignore) name =
     let ocamlc_config_cmd = Process.command_line ocamlc [ "-config" ] in
     let t =
       { name
+      ; ocamlc
       ; log
       ; dest_dir
       ; counter = 0
@@ -360,7 +372,6 @@ let create ?dest_dir ?ocamlc ?(log = ignore) name =
       ; c_compiler = ""
       ; stdlib_dir = ""
       ; ccomp_type = ""
-      ; c_libraries = []
       ; ocamlc_config = Ocaml_config.Vars.of_list_exn []
       ; ocamlc_config_cmd
       }
@@ -399,17 +410,19 @@ let compile_and_link_c_prog t ?(c_flags = []) ?(link_flags = []) code =
   let ok =
     if need_to_compile_and_link_separately t then
       run_ok (c_flags @ [ "-I"; t.stdlib_dir; "-c"; c_fname ])
-      && run_ok (("-o" :: exe_fname :: obj_fname :: t.c_libraries) @ link_flags)
+      && run_ok ("-o" :: exe_fname :: obj_fname :: link_flags)
     else
       run_ok
         (List.concat
            [ c_flags
            ; [ "-I"; t.stdlib_dir; "-o"; exe_fname; c_fname ]
-           ; t.c_libraries
            ; link_flags
            ])
   in
-  if ok then Ok () else Error ()
+  if ok then
+    Ok ()
+  else
+    Error ()
 
 let compile_c_prog t ?(c_flags = []) code =
   let dir = t.dest_dir ^/ sprintf "c-test-%d" (gen_id t) in
@@ -423,11 +436,12 @@ let compile_c_prog t ?(c_flags = []) code =
   let ok =
     Process.run_command_ok t ~dir
       (Process.command_args t.c_compiler
-         (c_flags
-         @ "-I" :: t.stdlib_dir :: "-o" :: obj_fname :: "-c" :: c_fname
-           :: t.c_libraries))
+         (c_flags @ [ "-I"; t.stdlib_dir; "-o"; obj_fname; "-c"; c_fname ]))
   in
-  if ok then Ok obj_fname else Error ()
+  if ok then
+    Ok obj_fname
+  else
+    Error ()
 
 let c_test t ?c_flags ?link_flags code =
   match compile_and_link_c_prog t ?c_flags ?link_flags code with
@@ -631,7 +645,10 @@ module Pkg_config = struct
       | None ->
         if
           String.exists package ~f:(function
-            | '=' | '>' | '<' -> true
+            | '='
+            | '>'
+            | '<' ->
+              true
             | _ -> false)
         then
           warn
@@ -683,7 +700,8 @@ module Pkg_config = struct
         | s -> String.extract_blank_separated_words s
       in
       Ok { libs = run "--libs"; cflags = run "--cflags" }
-    else Error stderr
+    else
+      Error stderr
 
   let query t ~package = Result.to_option @@ gen_query t ~package ~expr:None
 
@@ -722,11 +740,16 @@ let main ?(args = []) ~name f =
   try
     let t =
       create_from_inside_dune ~dest_dir:!dest_dir
-        ~log:(if !verbose then prerr_endline else log)
+        ~log:
+          (if !verbose then
+            prerr_endline
+          else
+            log)
         ~build_dir ~name
     in
     f t
-  with exn -> (
+  with
+  | exn -> (
     let bt = Printexc.get_raw_backtrace () in
     List.iter (List.rev !log_db) ~f:(eprintf "%s\n");
     match exn with

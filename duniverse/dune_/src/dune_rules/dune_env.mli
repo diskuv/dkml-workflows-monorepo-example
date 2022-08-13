@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open! Stdune
 
 type stanza = Stanza.t = ..
 
@@ -27,17 +28,13 @@ module Stanza : sig
   type config =
     { flags : Ocaml_flags.Spec.t
     ; foreign_flags : Ordered_set_lang.Unexpanded.t Foreign_language.Dict.t
-    ; link_flags : Link_flags.Spec.t
     ; env_vars : Env.t
     ; binaries : File_binding.Unexpanded.t list
     ; inline_tests : Inline_tests.t option
     ; menhir_flags : Ordered_set_lang.Unexpanded.t
     ; odoc : Odoc.t
-    ; js_of_ocaml : Ordered_set_lang.Unexpanded.t Js_of_ocaml.Env.t
     ; coq : Ordered_set_lang.Unexpanded.t
     ; format_config : Format_config.t option
-    ; error_on_use : User_message.t option
-    ; warn_on_load : User_message.t option
     }
 
   type pattern =
@@ -65,12 +62,6 @@ module Stanza : sig
   val empty : t
 
   val find : t -> profile:Profile.t -> config
-
-  val add_error : t -> message:User_message.t -> t
-
-  val add_warning : t -> message:User_message.t -> t
-
-  val fire_hooks : t -> profile:Profile.t -> unit
 end
 
 type stanza += T of Stanza.t

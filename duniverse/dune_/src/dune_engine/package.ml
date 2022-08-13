@@ -1,18 +1,28 @@
 open! Import
-module Stanza = Dune_lang.Stanza
 
 let opam_ext = ".opam"
 
 let is_opam_file path = String.is_suffix (Path.to_string path) ~suffix:opam_ext
 
 module Name = struct
-  include String
+  module T =
+    Interned.Make
+      (struct
+        let initial_size = 16
+
+        let resize_policy = Interned.Conservative
+
+        let order = Interned.Natural
+      end)
+      ()
+
+  include T
 
   include (
     Stringlike.Make (struct
-      type t = string
+      type t = T.t
 
-      let to_string x = x
+      let to_string = T.to_string
 
       let module_ = "Package.Name"
 
@@ -24,7 +34,10 @@ module Name = struct
 
       let of_string_opt s =
         (* DUNE3 verify no dots or spaces *)
-        if s = "" then None else Some s
+        if s = "" then
+          None
+        else
+          Some (make s)
     end) :
       Stringlike_intf.S with type t := t)
 
@@ -39,8 +52,7 @@ module Name = struct
 
   let version_fn (t : t) = to_string t ^ ".version"
 
-  module Infix = Comparator.Operators (String)
-  module Map_traversals = Memo.Make_map_traversals (Map)
+  module Infix = Comparator.Operators (T)
 end
 
 module Id = struct
@@ -50,13 +62,13 @@ module Id = struct
       ; dir : Path.Source.t
       }
 
-    let compare { name; dir } pkg =
-      let open Ordering.O in
-      let= () = Name.compare name pkg.name in
-      Path.Source.compare dir pkg.dir
+    let compare { dir; name } pkg =
+      match Name.compare pkg.name name with
+      | Eq -> Path.Source.compare dir pkg.dir
+      | s -> s
 
     let to_dyn { dir; name } =
-      let open Dyn in
+      let open Dyn.Encoder in
       record [ ("name", Name.to_dyn name); ("dir", Path.Source.to_dyn dir) ]
   end
 
@@ -81,16 +93,11 @@ module Dependency = struct
       | Lt
       | Neq
 
-    let equal a b =
-      match (a, b) with
-      | Eq, Eq | Gte, Gte | Lte, Lte | Gt, Gt | Lt, Lt | Neq, Neq -> true
-      | _ -> false
-
     let map =
       [ ("=", Eq); (">=", Gte); ("<=", Lte); (">", Gt); ("<", Lt); ("<>", Neq) ]
 
     let to_dyn =
-      let open Dyn in
+      let open Dyn.Encoder in
       function
       | Eq -> string "Eq"
       | Gt -> string "Gt"
@@ -106,11 +113,6 @@ module Dependency = struct
       | Gt -> `Gt
       | Lt -> `Lt
       | Neq -> `Neq
-
-    let encode x =
-      let f (_, op) = equal x op in
-      (* Assumes the [map] is complete, so exception is impossible *)
-      List.find_exn ~f map |> fst |> Dune_lang.Encoder.string
   end
 
   module Constraint = struct
@@ -119,14 +121,13 @@ module Dependency = struct
         | QVar of string
         | Var of string
 
-      let encode = function
-        | QVar v -> Dune_lang.Encoder.string v
-        | Var v -> Dune_lang.Encoder.string (":" ^ v)
-
       let decode =
         let open Dune_lang.Decoder in
         let+ s = string in
-        if String.is_prefix s ~prefix:":" then Var (String.drop s 1) else QVar s
+        if String.is_prefix s ~prefix:":" then
+          Var (String.drop s 1)
+        else
+          QVar s
 
       let to_opam : t -> OpamParserTypes.value =
         let nopos = Opam_file.nopos in
@@ -145,15 +146,6 @@ module Dependency = struct
       | Bop of Op.t * Var.t * Var.t
       | And of t list
       | Or of t list
-
-    let rec encode c =
-      let open Dune_lang.Encoder in
-      match c with
-      | Bvar x -> Var.encode x
-      | Uop (op, x) -> pair Op.encode Var.encode (op, x)
-      | Bop (op, x, y) -> triple Op.encode Var.encode Var.encode (op, x, y)
-      | And conjuncts -> list sexp (string "and" :: List.map ~f:encode conjuncts)
-      | Or disjuncts -> list sexp (string "or" :: List.map ~f:encode disjuncts)
 
     let decode =
       let open Dune_lang.Decoder in
@@ -195,26 +187,20 @@ module Dependency = struct
           | _ -> sum (ops @ logops))
 
     let rec to_dyn =
-      let open Dyn in
+      let open Dyn.Encoder in
       function
-      | Bvar v -> variant "Bvar" [ Var.to_dyn v ]
-      | Uop (b, x) -> variant "Uop" [ Op.to_dyn b; Var.to_dyn x ]
+      | Bvar v -> constr "Bvar" [ Var.to_dyn v ]
+      | Uop (b, x) -> constr "Uop" [ Op.to_dyn b; Var.to_dyn x ]
       | Bop (b, x, y) ->
-        variant "Bop" [ Op.to_dyn b; Var.to_dyn x; Var.to_dyn y ]
-      | And t -> variant "And" (List.map ~f:to_dyn t)
-      | Or t -> variant "Or" (List.map ~f:to_dyn t)
+        constr "Bop" [ Op.to_dyn b; Var.to_dyn x; Var.to_dyn y ]
+      | And t -> constr "And" (List.map ~f:to_dyn t)
+      | Or t -> constr "Or" (List.map ~f:to_dyn t)
   end
 
   type t =
     { name : Name.t
     ; constraint_ : Constraint.t option
     }
-
-  let encode { name; constraint_ } =
-    let open Dune_lang.Encoder in
-    match constraint_ with
-    | None -> Name.encode name
-    | Some c -> pair Name.encode Constraint.encode (name, c)
 
   let decode =
     let open Dune_lang.Decoder in
@@ -245,7 +231,9 @@ module Dependency = struct
     | Or [ c ] -> opam_constraint c
     | Or (c :: cs) ->
       Logop (nopos, `Or, opam_constraint c, opam_constraint (And cs))
-    | And [] | Or [] -> Code_error.raise "opam_constraint" []
+    | And []
+    | Or [] ->
+      Code_error.raise "opam_constraint" []
 
   let opam_depend : t -> OpamParserTypes.value =
     let nopos = Opam_file.nopos in
@@ -257,7 +245,7 @@ module Dependency = struct
       | Some c -> Option (nopos, pkg, [ c ])
 
   let to_dyn { name; constraint_ } =
-    let open Dyn in
+    let open Dyn.Encoder in
     record
       [ ("name", Name.to_dyn name)
       ; ("constr", Dyn.Option (Option.map ~f:Constraint.to_dyn constraint_))
@@ -270,13 +258,11 @@ module Source_kind = struct
       | Github
       | Bitbucket
       | Gitlab
-      | Sourcehut
 
     let to_string = function
       | Github -> "github"
       | Bitbucket -> "bitbucket"
       | Gitlab -> "gitlab"
-      | Sourcehut -> "sourcehut"
 
     type t =
       { user : string
@@ -284,10 +270,10 @@ module Source_kind = struct
       ; kind : kind
       }
 
-    let dyn_of_kind kind = kind |> to_string |> Dyn.string
+    let dyn_of_kind kind = kind |> to_string |> Dyn.Encoder.string
 
     let to_dyn { user; repo; kind } =
-      let open Dyn in
+      let open Dyn.Encoder in
       record
         [ ("kind", dyn_of_kind kind)
         ; ("user", string user)
@@ -298,36 +284,24 @@ module Source_kind = struct
       | Github -> "github.com"
       | Bitbucket -> "bitbucket.org"
       | Gitlab -> "gitlab.com"
-      | Sourcehut -> "sr.ht"
 
-    let base_uri { kind; user; repo } =
+    let homepage { kind; user; repo } =
       let host = host_of_kind kind in
-      sprintf "%s/%s/%s" host
-        (match kind with
-        | Sourcehut -> "~" ^ user
-        | _ -> user)
-        repo
-
-    let add_https s = "https://" ^ s
-
-    let homepage t = add_https (base_uri t)
+      sprintf "https://%s/%s/%s" host user repo
 
     let bug_reports t =
+      homepage t
+      ^
       match t.kind with
-      | Sourcehut -> add_https ("todo." ^ base_uri t)
-      | _ -> (
-        homepage t
-        ^
-        match t.kind with
-        | Sourcehut -> assert false
-        | Bitbucket | Github -> "/issues"
-        | Gitlab -> "/-/issues")
+      | Bitbucket
+      | Github ->
+        "/issues"
+      | Gitlab -> "/-/issues"
 
     let enum k =
       [ ("GitHub", Github, None)
       ; ("Bitbucket", Bitbucket, Some (2, 8))
       ; ("Gitlab", Gitlab, Some (2, 8))
-      ; ("Sourcehut", Sourcehut, Some (3, 1))
       ]
       |> List.map ~f:(fun (name, kind, since) ->
              let decode =
@@ -347,20 +321,8 @@ module Source_kind = struct
              let constr = to_string kind in
              (constr, decode))
 
-    let encode { user; repo; kind } =
-      let forge = to_string kind in
-      let path = user ^ "/" ^ repo in
-      let open Dune_lang.Encoder in
-      pair string string (forge, path)
-
-    let to_string t =
-      let base_uri =
-        let base = base_uri t in
-        match t.kind with
-        | Sourcehut -> "git." ^ base
-        | _ -> base ^ ".git"
-      in
-      "git+https://" ^ base_uri
+    let to_string { user; repo; kind } =
+      sprintf "git+https://%s/%s/%s.git" (host_of_kind kind) user repo
   end
 
   type t =
@@ -368,20 +330,14 @@ module Source_kind = struct
     | Url of string
 
   let to_dyn =
-    let open Dyn in
+    let open Dyn.Encoder in
     function
-    | Host h -> variant "Host" [ Host.to_dyn h ]
-    | Url url -> variant "Url" [ string url ]
+    | Host h -> constr "Host" [ Host.to_dyn h ]
+    | Url url -> constr "Url" [ string url ]
 
   let to_string = function
     | Host h -> Host.to_string h
     | Url u -> u
-
-  let encode =
-    let open Dune_lang.Encoder in
-    function
-    | Url url -> pair string string ("uri", url)
-    | Host host -> Host.encode host
 
   let decode =
     let open Dune_lang.Decoder in
@@ -391,7 +347,7 @@ end
 module Info = struct
   type t =
     { source : Source_kind.t option
-    ; license : string list option
+    ; license : string option
     ; authors : string list option
     ; homepage : string option
     ; bug_reports : string option
@@ -429,24 +385,6 @@ module Info = struct
     ; maintainers = None
     }
 
-  let example =
-    { source =
-        Some
-          (Host
-             { kind = Source_kind.Host.Github
-             ; user = "username"
-             ; repo = "reponame"
-             })
-    ; license = Some [ "LICENSE" ]
-    ; authors = Some [ "Author Name" ]
-    ; maintainers = Some [ "Maintainer Name" ]
-    ; documentation =
-        Some "https://url/to/documentation"
-        (* homepage and bug_reports are inferred from the source *)
-    ; homepage = None
-    ; bug_reports = None
-    }
-
   let to_dyn
       { source
       ; license
@@ -456,35 +394,15 @@ module Info = struct
       ; documentation
       ; maintainers
       } =
-    let open Dyn in
+    let open Dyn.Encoder in
     record
       [ ("source", (option Source_kind.to_dyn) source)
-      ; ("license", (option (list string)) license)
+      ; ("license", (option string) license)
       ; ("homepage", (option string) homepage)
       ; ("documentation", (option string) documentation)
       ; ("bug_reports", (option string) bug_reports)
       ; ("maintainers", option (list string) maintainers)
       ; ("authors", option (list string) authors)
-      ]
-
-  let encode_fields
-      { source
-      ; authors
-      ; license
-      ; homepage
-      ; documentation
-      ; bug_reports
-      ; maintainers
-      } =
-    let open Dune_lang.Encoder in
-    record_fields
-      [ field_o "source" Source_kind.encode source
-      ; field_l "authors" string (Option.value ~default:[] authors)
-      ; field_l "maintainers" string (Option.value ~default:[] maintainers)
-      ; field_l "license" string (Option.value ~default:[] license)
-      ; field_o "homepage" string homepage
-      ; field_o "documentation" string documentation
-      ; field_o "bug_reports" string bug_reports
       ]
 
   let decode ?since () =
@@ -498,10 +416,7 @@ module Info = struct
         (Dune_lang.Syntax.since Stanza.syntax (v (1, 9)) >>> repeat string)
     and+ license =
       field_o "license"
-        (Dune_lang.Syntax.since Stanza.syntax (v (3, 2))
-        >>> repeat1 string
-        <|> ( Dune_lang.Syntax.since Stanza.syntax (v (1, 9)) >>> string
-            >>| fun s -> [ s ] ))
+        (Dune_lang.Syntax.since Stanza.syntax (v (1, 9)) >>> string)
     and+ homepage =
       field_o "homepage"
         (Dune_lang.Syntax.since Stanza.syntax (v (1, 10)) >>> string)
@@ -554,7 +469,6 @@ type t =
   ; tags : string list
   ; deprecated_package_names : Loc.t Name.Map.t
   ; sites : Section.t Section.Site.Map.t
-  ; allow_empty : bool
   }
 
 (* Package name are globally unique, so we can reasonably expect that there will
@@ -565,44 +479,6 @@ let hash t = Id.hash t.id
 let name t = t.id.name
 
 let dir t = t.id.dir
-
-let encode (name : Name.t)
-    { id = _
-    ; loc = _
-    ; has_opam_file = _
-    ; synopsis
-    ; description
-    ; depends
-    ; conflicts
-    ; depopts
-    ; info
-    ; version
-    ; tags
-    ; deprecated_package_names
-    ; sites
-    ; allow_empty
-    } =
-  let open Dune_lang.Encoder in
-  let fields =
-    Info.encode_fields info
-    @ record_fields
-        [ field "name" Name.encode name
-        ; field_o "synopsis" string synopsis
-        ; field_o "description" string description
-        ; field_l "depends" Dependency.encode depends
-        ; field_l "conflicts" Dependency.encode conflicts
-        ; field_l "depopts" Dependency.encode depopts
-        ; field_o "version" string version
-        ; field "tags" (list string) ~default:[] tags
-        ; field_l "deprecated_package_names" Name.encode
-            (Name.Map.keys deprecated_package_names)
-        ; field_l "sits"
-            (pair Section.Site.encode Section.encode)
-            (Section.Site.Map.to_list sites)
-        ; field_b "allow_empty" allow_empty
-        ]
-  in
-  list sexp (string "package" :: fields)
 
 let decode ~dir =
   let open Dune_lang.Decoder in
@@ -640,11 +516,7 @@ let decode ~dir =
          Section.Site.Map.of_list_map Section.Site.to_string "sites"
          (pair Section.decode Section.Site.decode)
          Section.to_string "Site location name"
-     and+ allow_empty =
-       field_b "allow_empty"
-         ~check:(Dune_lang.Syntax.since Stanza.syntax (3, 0))
-     and+ lang_version = Dune_lang.Syntax.get_exn Stanza.syntax in
-     let allow_empty = lang_version < (3, 0) || allow_empty in
+     in
      let id = { Id.name; dir } in
      { id
      ; loc
@@ -659,7 +531,6 @@ let decode ~dir =
      ; tags
      ; deprecated_package_names
      ; sites
-     ; allow_empty
      }
 
 let to_dyn
@@ -676,9 +547,8 @@ let to_dyn
     ; loc = _
     ; deprecated_package_names
     ; sites
-    ; allow_empty
     } =
-  let open Dyn in
+  let open Dyn.Encoder in
   record
     [ ("id", Id.to_dyn id)
     ; ("synopsis", option string synopsis)
@@ -693,7 +563,6 @@ let to_dyn
     ; ( "deprecated_package_names"
       , Name.Map.to_dyn Loc.to_dyn_hum deprecated_package_names )
     ; ("sites", Section.Site.Map.to_dyn Section.to_dyn sites)
-    ; ("allow_empty", Bool allow_empty)
     ]
 
 let opam_file t = Path.Source.relative t.id.dir (Name.opam_fn t.id.name)
@@ -705,42 +574,13 @@ let file ~dir ~name = Path.relative dir (Name.to_string name ^ opam_ext)
 let deprecated_meta_file t name =
   Path.Source.relative t.id.dir (Name.meta_fn name)
 
-let default name dir =
-  let depends =
-    let open Dependency in
-    [ { name = Name.of_string "ocaml"; constraint_ = None }
-    ; { name = Name.of_string "dune"; constraint_ = None }
-    ]
-  in
-  { id = { name; dir }
-  ; loc = Loc.none
-  ; version = None
-  ; synopsis = Some "A short synopsis"
-  ; description = Some "A longer description"
-  ; depends
-  ; conflicts = []
-  ; info = Info.empty
-  ; depopts = []
-  ; has_opam_file = false
-  ; tags = [ "topics"; "to describe"; "your"; "project" ]
-  ; deprecated_package_names = Name.Map.empty
-  ; sites = Section.Site.Map.empty
-  ; allow_empty = false
-  }
-
 let load_opam_file file name =
+  let open Option.O in
   let loc = Loc.in_file (Path.source file) in
-  let open Memo.O in
-  let+ opam =
-    let+ opam =
-      Path.source file
-      |> Fs_memo.with_lexbuf_from_file ~f:(fun lexbuf ->
-             try Ok (Opam_file.parse lexbuf)
-             with User_error.E _ as exn -> Error exn)
-    in
-    match opam with
-    | Ok s -> Some s
-    | Error exn ->
+  let opam =
+    match Opam_file.load (Path.source file) with
+    | s -> Some s
+    | exception exn ->
       User_warning.emit ~loc
         [ Pp.text
             "Unable to read opam file. Some information about this package \
@@ -749,7 +589,6 @@ let load_opam_file file name =
         ];
       None
   in
-  let open Option.O in
   let get_one name =
     let* opam = opam in
     let* value = Opam_file.get_field opam name in
@@ -786,7 +625,7 @@ let load_opam_file file name =
       ; homepage = get_one "homepage"
       ; bug_reports = get_one "bug-reports"
       ; documentation = get_one "doc"
-      ; license = get_many "license"
+      ; license = get_one "license"
       ; source =
           (let+ url = get_one "dev-repo" in
            Source_kind.Url url)
@@ -797,10 +636,7 @@ let load_opam_file file name =
   ; tags = Option.value (get_many "tags") ~default:[]
   ; deprecated_package_names = Name.Map.empty
   ; sites = Section.Site.Map.empty
-  ; allow_empty = true
   }
-
-let equal = Poly.equal
 
 let missing_deps (t : t) ~effective_deps =
   let specified_deps =

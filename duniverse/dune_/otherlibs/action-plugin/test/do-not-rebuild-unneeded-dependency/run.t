@@ -45,6 +45,7 @@ only the dependencies up to this stage are rebuilt.
   $ dune runtest
   Building foo_or_bar!
   Building foo!
+        client alias runtest
   Hello from foo!
 
   $ printf "bar" > foo_or_bar_source
@@ -54,4 +55,5 @@ only the dependencies up to this stage are rebuilt.
   $ dune runtest
   Building foo_or_bar!
   Building bar!
+        client alias runtest
   Hello from bar!

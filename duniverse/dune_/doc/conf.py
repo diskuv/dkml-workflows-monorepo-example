@@ -154,6 +154,6 @@ html_context = {
     'display_github': True,
     'github_user': 'ocaml',
     'github_repo': 'dune',
-    'github_version': 'main',
+    'github_version': 'master',
     'conf_py_path': '/doc/',
 }

@@ -7,7 +7,9 @@ module Make (S : Stringlike_intf.S_base) = struct
     match S.of_string_opt s with
     | Some s -> s
     | None ->
-      Code_error.raise ("Invalid " ^ S.module_ ^ ".t") [ ("s", Dyn.string s) ]
+      Code_error.raise
+        ("Invalid " ^ S.module_ ^ ".t")
+        [ ("s", Dyn.Encoder.string s) ]
 
   let error_message s = Printf.sprintf "%S is an invalid %s." s S.description
 
@@ -42,17 +44,17 @@ module Make (S : Stringlike_intf.S_base) = struct
     , fun fmt t -> Format.pp_print_string fmt (to_string t) )
 
   let decode =
-    let open Dune_sexp.Decoder in
+    let open Dune_lang.Decoder in
     map_validate (located string) ~f:of_string_user_error
 
   let decode_loc =
-    let open Dune_sexp.Decoder in
+    let open Dune_lang.Decoder in
     map_validate (located string) ~f:(fun ((loc, _) as s) ->
         let open Result.O in
         let+ t = of_string_user_error s in
         (loc, t))
 
-  let encode t = Dune_sexp.Encoder.(string (to_string t))
+  let encode t = Dune_lang.Encoder.(string (to_string t))
 
-  let to_dyn t = Dyn.string (to_string t)
+  let to_dyn t = Dyn.Encoder.string (to_string t)
 end

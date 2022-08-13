@@ -1,589 +1,3 @@
-3.4.1 (26-07-2022)
-------------------
-
-- Fix build on cygwin/i686-w64-mingw32 (#6008, @kit-ty-kate)
-
-3.4.0 (20-07-2022)
-------------------
-
-- Make `dune describe` correctly handle overlapping implementations
-  for virtual libraries (#5971, fixes #5747, @esope)
-
-- Building the `@check` alias should make sure the libraries and executables
-  don't have dependency cycles (#5892, @rgrinberg)
-
-- [ctypes] Add support for the `errno` parameter using the `errno_policy` field
-  in the ctypes settings. (#5827, @droyo)
-
-- Fix `dune coq top` when it is invoked on files from a subdirectory of the
-  directory containing the associated stanza (#5784, fixes #5552, @ejgallego,
-  @rlepigre, @Alizter)
-
-- Fix hint when an invalid module name is found. (#5922, fixes #5273, @emillon)
-
-- The `(cat)` action now supports several files. (#5928, fixes #5795, @emillon)
-
-- Dune no longer uses shimmed `META` files for OCaml 5.x, solely using the ones
-  installed by the compiler. (#5916, @dra27)
-
-- Fix handling of the `(deps)` field in `(test)` stanzas when there is an
-  `.expected` file. (#5952, #5951, fixes #5950, @emillon)
-
-- Ignore insignificant filesystem events. This stops RPC in watch mode from
-  flashing errors on insignificant file system events such as changes in the
-  `.git/` directory. (#5953, @rgrinberg)
-
-- Fix parsing more error messages emitted by the OCaml compiler. In
-  particular, messages where the excerpt line number started with a blank
-  character were skipped. (#5981, @rgrinberg)
-
-- env stanza: warn if some rules are ignored because they appear after a
-  wildcard rule. (#5898, fixes #5886, @emillon)
-
-- On Windows, XDG_CACHE_HOME is taken to be the `FOLDERID_InternetCache` if
-  unset, and XDG_CONFIG_HOME and XDG_DATA_HOME are both taken to be
-  `FOLDERID_LocalAppData` if unset.  (#5943, fixes #5808, @nojb)
-
-3.3.1 (19-06-2022)
-------------------
-
-- Improve parsing of ocamlc errors. We now correctly strip excerpts and parse
-  alerts (#5879, @rgrinberg)
-
-- The `(libraries)` field of the `coq.theory` stanza has been renamed to
-  `(plugins)` and the Coq language version has been bumped to 0.5.
-
-3.3.0 (17-06-2022)
-------------------
-
-- Sandbox preprocessing, lint, and dialect rules by default. All these rules
-  now require precise dependency specifications (#5807, @rgrinberg)
-
-- Allow list expansion in the `pps` specification for preprocessing (#5820,
-  @Firobe)
-
-- Add warnings 67-69 to dune's default set of warnings. These are warnings of
-  the form "unused X.." (#5844, @rgrinbreg)
-
-- Introduce project "composition" for coq theories. Coq theories in separate
-  projects can now refer to each other when in the same workspace (#5784,
-  @Alizter, @rgrinberg)
-
-- Fix hint message for `data_only_dirs` that wrongly mentions the unknown
-  constructor `data_only` (#5803, @lambdaxdotx)
-
-- Fix creating sandbox directory trees by getting rid of buggy memoization
-  (@5794, @rgrinberg, @snowleopard)
-
-- Handle directory dependencies in sandboxed rules. Previously, the parents of
-  these directory dependencies weren't created. (#5754, @rgrinberg)
-
-- Set the exit code to 130 when dune is terminated with a signal (#5769, fixes
-  #5757)
-
-- Support new locations of unix, str, dynlink in OCaml >= 5.0 (#5582, @dra27)
-
-- The `coq.theory` stanza now produces rules for running `coqdoc`. Given a
-  theory named `mytheory`, the directory targets `mytheory.html/` and
-  `mytheory.tex/` or additionally the aliases `@doc` and `@doc-latex` will
-  build the HTML and LaTeX documentation repsectively. (#5695, fixes #3760,
-  @Alizter)
-
-- Coq theories marked as `(boot)` cannot depend on other theories
-  (#5867, @ejgallego)
-
-- Ignore `bigarray` in `(libraries)` with OCaml >= 5.0. (#5526, fixes #5494,
-  @moyodiallo)
-
-- Start with :standard when building the ctypes generated foreign stubs so that
-  we include important compiler flags, such as -fPIC (#5816, fixes #5809).
-
-3.2.0 (17-05-2022)
-------------------
-
-- Fixed `dune describe workspace --with-deps` so that it correctly handles
-  Reason files, as well as files any other dialect. (#5701, @esope)
-
-- Disable alerts when compiling code in vendored directories (#5683,
-  @NathanReb)
-
-- Fixed `dune describe --with-deps`, that crashed when some preprocessing was
-  required in a dune file using `per_module`. (#5682, fixes #5680, @esope)
-
-- Add `$ dune describe pp` to print the preprocssed ast of sources. (#5615,
-  fixes #4470, @cannorin)
-
-- Report dune file evaluation errors concurrently. In the same way we report
-  build errors. (#5655, @rgrinberg)
-
-- Watch mode now default to clearing the terminal on rebuild (#5636, fixes,
-  #5216, @rgrinberg)
-
-- The output of jobs that finished but were cancelled is now omitted. (#5631,
-  fixes #5482, @rgrinberg)
-
-- Allows to configure all the default destination directories with `./configure`
-  (adds `bin`, `sbin`, `data`, `libexec`). Use `OPAM_SWITCH_PREFIX` instead of
-  calling the `opam` binaries in `dune install`. Fix handling of multiple
-  `libdir` in `./configure` for handling `/usr/lib/ocaml/` and
-  `/usr/local/lib/ocaml`. In `dune install` forbid relative directories in
-  `libdir`, `docdir` and others specific directory setting because their handling
-  was inconsistent (#5516, fixes #3978 and #5455, @bobot)
-
-- `--terminal-persistence=clear-on-rebuild` will no longer destroy scrollback
-  on some terminals (#5646, @rgrinberg)
-
-- Add a fmt command as a shortcut of `dune build @fmt --auto-promote` (#5574,
-  @tmattio)
-
-- Watch mode now tracks copied external files, external directories for
-  dependencies, dune files in OCaml syntax, files used by `include` stanzas,
-  dune-project, opam files, libraries builtin with compiler, and foreign
-  sources (#5627, #5645, #5652, #5656, #5672, #5691, #5722, fixes #5331,
-  @rgrinberg)
-
-- Improve metrics for cram tests. Include test names in the event and add a
-  category for cram tests (#5626, @rgrinberg)
-
-- Allow specifying multiple licenses in project file (#5579, fixes #5574,
-  @liyishuai)
-
-- Match `glob_files` only against files in external directories (#5614, fixes
-  #5540, @rgrinberg)
-
-- Add pid's to chrome trace output (#5617, @rgrinberg)
-
-- Fix race when creating local cache directory (#5613, fixes #5461, @rgrinberg)
-
-- Add `not` to boolean expressions (#5610, fix #5503, @rgrinberg)
-
-- Fix relative dependencies outside the workspace (#4035, fixes #5572, @bobot)
-
-- Allow to specify `--prefix` via the environment variable
-  `DUNE_INSTALL_PREFIX` (#5589, @vapourismo)
-
-- Dune-site.plugin: add support for `archive(native|byte, plugin)` used in the
-  wild before findlib documented `plugin(native|byte)` in 2015 (#5518, @bobot)
-
-- Fix a bug where Dune would not correctly interpret `META` files in alternative
-  layout (ie when the META file is named `META.$pkg`). The `Llvm` bindings were
-  affected by this issue. (#5619, fixes #5616, @nojb)
-
-- Support `(binaries)` in `(env)` in dune-workspace files (#5560, fix #5555,
-  @emillon)
-
-- (mdx) stanza: add support for (locks). (#5628, fixes #5489, @emillon)
-
-- (mdx) stanza: support including files in different directories using relative
-  paths, and provide better error messages when paths are invalid (#5703, #5704,
-  fixes #5596, @emillon)
-
-- Fix ctypes rules for external lib names which aren't valid ocaml names
-  (#5667, fixes #5511, @Khady)
-
-3.1.1 (19/04/2022)
-------------------
-
-- Fix build on Cygwin. (#5593, fixes 5577, @nojb)
-
-- Fix execution of `(system ..)` actions on Windows. (#5593, fixes #5523,
-  @nojb)
-
-3.1.0 (15/04/2022)
-------------------
-
-- Add `sourcehut` as an option for defining project sources in dune-project
-  files. For example, `(source (sourcehut user/repo))`. (#5564, @rgrinberg)
-
-- Add `dune coq top` command for running a Coq toplevel (#5457, @rlepigre)
-
-- Fix dune exec dumping database in wrong directory (#5544, @bobot)
-
-- Always output absolute paths for locations in RPC reported diagnostics
-  (#5539, @rgrinberg)
-
-- Add `(deps <deps>)` in ctype field (#5346, @bobot)
-
-- Add `(include <file>)` constructor to dependency specifications. This can be
-  used to introduce dynamic dependencies (#5442, @anmonteiro)
-
-- Ensure that `dune describe` computes a transitively closed set of
-  libraries (#5395, @esope)
-
-- Add direct dependencies to $ dune describe output (#5412, @esope)
-
-- Show auto-detected concurrency on Windows too (#5502, @MisterDA)
-
-- Fix operations that remove folders with absolute path. This happens when
-  using esy (#5507, @EduardoRFS)
-
-- Dune will not fail if some directories are non-empty when uninstalling.
-  (#5543, fixes #5542, @nojb)
-
-- `coqdep` now depends only on the filesystem layout of the .v files,
-  and not on their contents (#5547, helps with #5100, @ejgallego)
-
-- The mdx stanza 0.2 can now be used with `(implicit_transitive_deps false)`
-  (#5558, fixes #5499, @emillon)
-
-- Fix missing parenthesis in printing of corresponding terminal command for
-  `(with-outputs-to )` (#5551, fixes #5546, @Alizter)
-
-3.0.3 (01/03/2022)
-------------------
-
-- Do not enable warnings 63-70 by default (#5476, fixes #5464, @rgrinberg)
-
-- Allow %{read-lines} to introduce dynamic dependencies like %{read}. (#5440,
-  @anmonteiro)
-
-- Look up `gmake` before `make` (#5474, fixes #5470, @rgrinberg)
-
-- Handle empty output from `getconf` (#5473 fixes #5471, @mndrix)
-
-- Depend on any provided `foreign_archives` for ctypes stub generation (#5475,
-  @mbacarella)
-
-3.0.2 (17/02/2022)
-------------------
-
-- Fix digest computation bug introduced in 3.0.1 (#5451, @rgrinberg)
-
-3.0.1 (17/02/2022)
-------------------
-
-- Fix compilation on MacOS SDK < 10.13. The native watch mode is disabled in
-  such instances (#5431 fix #5430, @rgrinberg)
-
-- Do no add workspace_root to `BUILD_PATH_PREFIX_MAP` for projects before 3.0
-  (5448, @rgrinberg)
-
-- Fix performance regression in incremental builds (#5439, @snowleopard)
-
-3.0.0 (11/02/2022)
-------------------
-
-- Remove `uchar` and `seq` dummy ocamlfind libraries from dune's builtin
-  library database (#5260, @kit-ty-kate)
-
-- Add a `DUNE_DIFF_COMMAND` environment variable to match `--diff-command`
-  command-line parameter (@raphael-proust, fix #5369, #5375)
-
-- Add support for odoc-link rules (#5045, @jonludlam, @lubegasimon)
-
-- Dune will no longer generate documentation for hidden modules (#5045,
-  @jonludlam, @lubegasimon)
-
-- Parse the `native_pack_linker` field of `ocamlc -config` (#5281, @TheLortex)
-
-- Fix plugins with dot in the name (#5182, @bobot, review @rgrinberg)
-
-- Don't generate the dune-site build part when not needed (#4861, @bobot,
-  review @kit-ty-kate)
-
-- Fix installation of implementations of virtual libraries (#5150, fix #3636,
-  @rgrinberg)
-
-- Run tests in all modes defined. Previously, jsoo was excluded. (@hhugo,
-  #5049, fix #4951)
-
-- Allow to configure the alias to run the jsoo tests (@hhugo, #5049, #4999)
-
-- Set jsoo compilation flags in the `env` stanza (@hhugo, #5049, #1613)
-
-- Allow to configure jsoo separate compilation in the `env` stanza. Previously,
-  it was hard coded to always be enabled in the `dev` profile. (@hhugo, #5049,
-  fix #970)
-
-- Fix build-info version in jsoo executables (@hhugo, #5049, fix #4444)
-
-- Pass `-no-check-prims` when building bytecode for jsoo (@hhugo, #5049, #4027)
-
-- Fix jsoo builds when dynamically linked foreign archives are disabled
-  (@hhugo, #5049)
-
-- Disallow empty packages starting from 3.0.  Empty packages may be
-  re-enabled by adding the `(allow_empty)` to the package stanza in
-  the dune-project file. (#4867, fix #2882, @kit-ty-kate, @rgrinberg)
-
-- Add `link_flags` field to the `executable` field of `inline_tests` (#5088,
-  fix #1530, @jvillard)
-
-- In watch mode, use fsevents instead of fswatch on OSX (#4937, #4990, fixes
-  #4896 @rgrinberg)
-
-- Remove `inotifywait` watch mode backend on Linux. We now use the inotify API
-  exclusively (#4941, @rgrinberg)
-
-- Report cycles between virtual libraries and their implementation (#5050,
-  fixes #2896, @rgrinberg)
-
-- Warn when lang versions have an ignored suffix. `(lang dune 2.3.4)` or `(lang
-  dune 2.3suffix)` were silently parsed as `2.3` and we know suggest to remove
-  the prefix. (#5040, @emillon)
-
-- Allow users to specify dynamic dependencies in rules. For example `(deps
-  %{read:foo.gen})` (#4662, fixes #4089, @jeremiedimino)
-
-- Sandbox infer rules for menhir. Fixes possible "inconsistent assumptions"
-  errors (#5015, @rgrinberg)
-
-- Experimental support for ctypes stubs (#3905, fixes #135, @mbacarella)
-
-- Fix interpretation of `binaries` defined in the `env stanza`. Binaries
-  defined in `x/dune` wouldn't be visible in `x/*/**/dune. (#4975, fixes #4976,
-  @Leonidas-from-XIV, @rgrinberg)
-
-- Do not list private libraries in package listings (#4945, fixes #4799,
-  @rgrinberg)
-
-- Allow spaces in cram test paths (#4980, fixes #4162, @rgrinberg)
-
-- Improve error handling of misbehaving cram scripts. (#4981, fix #4230,
-  @rgrinberg)
-
-- Fix `foreign_stubs` inside a `tests` stanza. Previously, dune would crash
-  when this field was present (#4942, fix #4946, @rgrinberg)
-
-- Add the `enabled_if` field to `inline_tests` within the `library` stanza.
-  This allows us to disable executing the inline tests while still allowing for
-  compilation (#4939, @rgrinberg)
-
-- Generate a `dune-project` when initializing projects with `dune init proj ...`
-  (#4881, closes #4367, @shonfeder)
-
-- Allow spaces in the directory argument of the `subdir` stanza (#4943, fixes
-  #4907, @rgrinberg)
-
-- Add a `%{toolchain}` expansion variable (#4899, fixes #3949, @rgrinberg)
-
-- Include dependencies of executables when creating toplevels (either `dune
-  top` or `dune utop`) (#4882, fixes #4872, @Gopiancode)
-
-- Fixes `opam` META file requires entry for private libs (#4841, fixes #4839, @toots)
-
-- Fixes `dune exec` not adding .exe on Windows (#4371, fixes #3322, @MisterDA)
-
-- Allow multiple cinaps stanzas in the same directory (#4460, @rgrinberg)
-
-- Fix `$ dune subst` in empty git repositories (#4441, fixes #3619, @rgrinberg)
-
-- Improve interpretation of ansi escape sequence when spawning processes (#4408,
-  fixes #2665, @rgrinberg)
-
-- Allow `(package pkg)` in dependencies even if `pkg` is an installed package
-  (#4170, @bobot)
-
-- Allow `%{version:pkg}` to work for external packages (#4104, @kit-ty-kate)
-
-- Add `(glob_files_rec <dir>/<glob>)` for globbing files recursively (#4176,
-  @jeremiedimino)
-
-- Automatically generate empty `.mli` files for executables and tests (#3768,
-  fixes #3745, @CraigFe)
-
-- Add `ocaml` command subgroup for OCaml related commands such as `utop`, `top`,
-  and `merlin` (#3936, @rgrinberg).
-
-- Detect unknown variables more eagerly (#4184, @jeremiedimino)
-
-- Improve location of variables and macros in error messages (#4205,
-  @jeremiedimino)
-
-- Auto-detect `dune-project` files as `dune` files in Emacs (#4222, @shonfeder)
-
-- Dune no longer automatically create or edit `dune-project` files
-  (#4239, fixes #4108, @jeremiedimino)
-
-- Warn if `dune-project` is not found (fatal in release mode) (#5343, @emillon)
-
-- Cleanup temporary files after running `$ dune exec`. (#4260, fixes #4243,
-  @rgrinberg)
-
-- Add a new subcommand `dune ocaml dump-dot-merlin` that prints a mix of all the
-  merlin configuration of a directory (defaulting to the current directory) in
-  the Merlin configuration syntax. (#4250, @voodoos)
-
-- Enable cram tests by default (#4262, @rgrinberg)
-
-- Drop support for opam 1.x (#4280, @jeremiedimino)
-
-- Stop calling `ocamlfind` to determine the library search path or
-  library installation directory. This makes the behavior of Dune
-  simpler and more reproducible (#4281, @jeremiedimino)
-
-- Remove the `external-lib-deps` command. This command was only
-  approximative and the cost of maintainance was getting too high. We
-  removed it to make room for new more important features (#4298,
-  @jeremiedimino)
-
-- It is now possible to define action dependencies through a chain
-  of aliases. (#4303, @aalekseyev)
-
-- If an .ml file is not used by an executable, Dune no longer report
-  parsing error in this file (#4330, @jeremiedimino)
-
-- Add support for sandboxing using hard links (#4360, Andrey Mokhov)
-
-- Fix dune crash when `subdir` is an absolute path (#4366, @anmonteiro)
-
-- Changed the implementation of actions attached to aliases, as in
-  `(rule (alias runtest) (action (run ./test)))`. A visible result for
-  users is that such actions are now memoized for longer. For
-  instance:
-  ```
-  $ echo '(rule (alias runtest) (action (echo "X=%{env:X=0}\n")))` > dune
-  $ X=1 dune runtest
-  X=1
-  $ X=2 dune runtest
-  X=2
-  $ X=1 dune runtest
-  ```
-  Previously, Dune would have re-executed the action again at the last
-  line. Now it remembers the result of the first execution.
-
-- Fix a bug where dune would always re-run all actions that produce symlinks,
-  even if their dependencies did not change. (#4405, @aalekseyev)
-
-- Fix a bug that was causing Dune to re-hash generated files more
-  often than necessary (#4419, @jeremiedimino)
-
-- Fields allowed in the config file are now also allowed in the
-  workspace file (#4426, @jeremiedimino)
-
-- Add options to control how Dune should handle stdout and stderr of
-  actions when then succeed. It is now possible to ask Dune to ignore
-  the stdout of actions when they succeed or to request that the
-  stderr of actions must be empty. This allows to reduce the noise of
-  large builds (#4422, #4515, @jeremiedimino)
-
-- The `@all` alias no longer depends directly on copies of files from the source
-  directory (#4461, @nojb)
-
-- Allow dune-file as an alternative file name for dune files (needs to be
-  enabled in the dune-project file) (#4428, @nojb)
-
-- Drop support for upgrading jbuilder projects (#4473, @jeremiedimino)
-
-- Extend the environment variable `BUILD_PATH_PREFIX_MAP` to rewrite
-  the root of the build dir (or sandbox) to `/workspace_root` (#4466,
-  @jeremiedimino)
-
-- Simplify the implementation of build cache. We stop using the cache daemon to
-  access the cache and instead write to and read from it directly. The new cache
-  implementation is based on Jenga's cache library, which was thoroughly tested
-  on large-scale builds. Using Jenga's cache library will also make it easier
-  for us to port Jenga's cloud cache to Dune. (#4443, #4465, Andrey Mokhov)
-
-- More informative error message when Dune can't read a target that's supposed
-  to be produced by the action. Old message is still produced on ENOENT, but other
-  errors deserve a more detailed report. (#4501, @aalekseyev)
-
-- Fixed a bug where a sandboxed action would fail if it declares no dependencies in
-  its initial working directory or any directory it `chdir`s into. (#4509, @aalekseyev)
-
-- Fix a crash when clearing temporary directories (#4489, #4529, Andrey Mokhov)
-
-- Dune now memoizes all errors when running in the file-watching mode. This
-  speeds up incremental rebuilds but may be inconvenient in rare cases, e.g. if
-  a build action fails due to a spurious error, such as running out of memory.
-  Right now, the only way to force such actions to be rebuilt is to restart
-  Dune, which clears all memoized errors. In future, we would like to provide a
-  way to rerun all actions failed due to errors without restarting the build,
-  e.g. via a Dune RPC call. (#4522, Andrey Mokhov)
-
-- Remove `dune compute`. It was broken and unused (#4540,
-  @jeremiedimino)
-
-- No longer generate an approximate merlin files when computing the
-  ocaml flags fails, for instance because they include the contents of
-  a file that failed to build. This was a niche feature and it was
-  getting in the way of making Dune's core better. (#4607, @jeremiedimino)
-
-- Make Dune display the progress indicator in all output modes except quiet
-  (#4618, @aalekseyev)
-
-- Report accurate process timing information in trace mode (enabled with
-  `--trace-file`) (#4517, @rgrinberg)
-
-- Do not log `live_words` and `free_words` in trace file. This allows using
-  `Gc.quick_stat` which does not scan the heap. (#4643, @emillon)
-
-- Don't let command run by Dune observe the environment variable
-  `INSIDE_EMACS` in order to improve reproducibility (#4680,
-  @jeremiedimino)
-
-- Fix `root_module` when used in public libraries (#4685, fixes #4684,
-  @rgrinberg, @CraigFe)
-
-- Fix `root_module` when used with preprocessing (#4683, fixes #4682,
-  @rgrinberg, @CraigFe)
-
-- Display Coq profile flags in `dune printenv` (#4767, @ejgallego)
-
-- Introduce mdx stanza 0.2, requiring mdx >= 1.9.0, with a new generic `deps`
-  field and the possibility to statically link `libraries` in the test
-  executable. (#3956, #5391, fixes #3955)
-
-- Improve lookup of optional or disabled binaries. Previously, we'd treat every
-  executable with missing libraries as optional. Now, we treat make sure to
-  look at the library's optional or enabled_if status (#4786).
-
-- Always use 7 char hash prefix in build info version (#4857, @jberdine, fixes
-  #4855)
-
-- Allow to explicitly disable/enable the use of `dune subst` by adding a
-  new `(subst <disable|enable>)` stanza to the `dune-project` file.
-  (#4864, @kit-ty-kate)
-
-- Simplify the way `dune` discovers the root of the workspace. It now
-  stops at the first `dune-workspace` file it encounters, and fails if
-  it finds neither a `dune-workspace` nor a `dune-project` file
-  (#4921, fixes #4459, @jeremiedimino)
-
-- Dune no longer reads installed META files for libraries distributed with the
-  compiler, instead using its own internal database. (#4946, @nojb)
-
-- Add support for `(empty_module_interface_if_absent)` in executable and library
-  stanzas. (#4955, @nojb)
-
-- Add support for `%{bin-available:...}` (#4995, @jeremiedimino)
-
-- Make sure running `git` or `hg` in a sandboxed action, such as a
-  cram test cannot escape the sandbox and pick up some random git or
-  mercurial repository on the file system (#4996, @jeremiedimino)
-
-- Allow `%{read:...}` in more places such as `(enabled_if ...)`
-  (#4994, @jeremiedimino)
-
-- Run each action in its own process group so that we don't leave
-  stray processes behind when killing actions (#4998, @jeremiedimino)
-
-- Add an option `expand_aliases_in_sandbox` (#5003, @jeremiedimino)
-
-- Allow to cancel the initial scan via Control+C (#4460, fixes #4364
-  @jeremiedimino)
-
-- Add experimental support for directory targets (#3316, #5025, Andrey Mokhov),
-  enabled via `(using directory-targets 0.1)` in `dune-project`.
-
-- Delete old `promote-into`, `promote-until-clean` and `promote-until-clean-into`
-  syntax (#5091, Andrey Mokhov).
-
-- Add link_flags in the env stanza (#5215)
-
-- Bootstrap: ignore errors when trying to remove generated files. (#5407,
-  @damiendoligez)
-
-2.9.4 (unreleased)
-------------------
-
-- Do not generate META information for `bigarray` library in OCaml >= 5.0
-  (#5421, @nojb)
-
-- Support new locations of unix, str, dynlink in OCaml >= 5.0
-  (#5582, @dra27)
-
 2.9.3 (26/01/2022)
 ------------------
 
@@ -625,7 +39,7 @@
 
 - Add support for instrumentation dependencies (#4210, fixes #3983, @nojb)
 
-- Add the possibility to use `locks` with the cram tests stanza (#4397, @voodoos)
+- Add the possibility to use `locks` with the cram tests stanza (#4480, @voodoos)
 
 - Allow to set up merlin in a variant of the default context
   (#4145, @TheLortex, @voodoos)
@@ -652,9 +66,9 @@
   the rework of the Coq "native" compilation system (#4760, @ejgallego)
 
 - Fix a bug where instrumentation flags would be added even if the
-  instrumentation was disabled (@nojb, #4770)
+  instrumentatation was disabled (@nojb, #4770)
 
-- Fix #4682: option `-p` takes now precedence on environment variable
+- Fix #4682: option `-p` takes now precedence on environement variable
   `DUNE_PROFILE` (#4730, #4774, @bobot, reported by @dra27 #4632)
 
 - Fix installation with opam of package with dune sites. The `.install` file is
@@ -691,16 +105,18 @@
   that `(using coq 0.3)` does require Coq 8.10 at least (#4224, fixes
   #4142, @ejgallego)
 
-- Add a META rule for `compiler-libs.native-toplevel` (#4175, @altgr)
+- Add a META rule for 'compiler-libs.native-toplevel' (#4175, @altgr)
 
 - No longer call `chmod` on symbolic links (fixes #4195, @dannywillems)
+
+- Dune no longer automatically create or edit `dune-project` files
+  (#4239, fixes #4108, @jeremiedimino)
 
 - Have `dune` communicate the location of the standard library directory to
   `merlin` (#4211, fixes #4188, @nojb)
 
-- Workaround incorrect exception raised by `Unix.utimes` (OCaml PR#8857) in
-  `Path.touch` on Windows. This fixes dune cache in direct mode on Windows.
-  (#4223, @dra27)
+- Workaround incorrect exception raised by Unix.utimes (OCaml PR#8857) in
+  Path.touch on Windows (#4223, @dra27)
 
 - `dune ocaml-merlin` is now able to provide configuration for source files in
   the `_build` directory. (#4274, @voodoos)
@@ -718,6 +134,8 @@
 - Do not pass include directories containing native objects when compiling
   bytecode (#4200, @nojb)
 
+- Allow `%{version:pkg}` to work for external packages (#4104, @kit-ty-kate)
+
 2.8.2 (21/01/2021)
 ------------------
 
@@ -726,9 +144,6 @@
 
 - Fixed memory blow up introduced in 2.8.0 (#4144, fixes #4134,
   @jeremiedimino)
-
-- Configurator: always link the C libraries in the build command
-  (#4088, @MisterDA).
 
 2.8.1 (14/01/2021)
 ------------------
@@ -857,8 +272,8 @@
   most cases and not correct in other cases in particular on arm32.
   (#4085, fixes #4069, fixes #2527, @emillon)
 
-- Generate archive rules compatible with 4.12. Dune no longer attempts to
-  generate an archive file if it's unnecessary (#3973, fixes #3766, @rgrinberg)
+- Generate archive rules compatible with 4.12. Dune longer attempt to generate
+  an archive file if it's unnecessary (#3973, fixes #3766, @rgrinberg)
 
 - Fix generated Merlin configurations when multiple preprocessors are defined
   for different modules in the same folder. (#4092, fixes #2596, #1212 and
@@ -909,7 +324,7 @@
 - Formatting of dune files is now done in the executing dune process instead of
   in a separate process. (#3536, @nojb)
 
-- Add a `--debug-artifact-substitution` flag to help debug problem with
+- Add a `--debug-artifact-substution` flag to help debug problem with
   version not being captured by `dune-build-info` (#3589,
   @jeremiedimino)
 
@@ -1056,7 +471,7 @@
 - [coq] Support for theory dependencies and compositional builds using
   new field `(theories ...)` (#2053, @ejgallego, @rgrinberg)
 
-- From now on, each version of a syntax extension must be explicitly tied to a
+- From now on, each version of a syntax extension must be explicitely tied to a
   minimum version of the dune language. Inconsistent versions in a
   `dune-project` will trigger a warning for version <=2.4 and an error for
   versions >2.4 of the dune language. (#3270, fixes #2957, @voodoos)
@@ -1334,7 +749,7 @@
 - Define (paths ...) fields in (context ...) definitions in order to set or
   extend any PATH-like variable in the context environment. (#2426, @nojb)
 
-- The `diff` action will always normalize newlines before diffing. Previously, it
+- The `diff` action will always normalize newlines before diffing. Perviousy, it
   would not do this normalization for rules defined in jbuild files. (#2457,
   @rgrinberg)
 
@@ -1450,13 +865,13 @@
 - Add (deprecated_package_names) field to (package) declaration in
   dune-project. The names declared here can be used in the (old_public_name)
   field of (deprecated_library_name) stanza. These names are interpreted as
-  library names (not prefixed by a package name) and appropriate redirections are
-  setup in their META files. This feature is meant to migrate old libraries which
+  library names (not prefixed by a package name) and appropiate redirections are
+  setup in their META files. This feaure is meant to migrate old libraries which
   do not follow Dune's convention of prefixing libraries with the package
   name. (#2696, @nojb)
 
 - The fields `license`, `authors`, `maintainers`, `source`, `bug_reports`,
-  `homepage`, and `documentation` of `dune-project` can now be overridden on a
+  `homepage`, and `documentation` of `dune-project` can now be overriden on a
   per-package basis. (#2774, @nojb)
 
 - Change the default `modes` field of executables to `(mode exe)`. If
@@ -1501,7 +916,7 @@
 1.11.2 (20/08/2019)
 -------------------
 
-- Remove the optimisation of passing `-nodynlink` for executables when
+- Remove the optimisation of passing `-nodynlink` for executalbes when
   not necessary. It seems to be breaking things (see #2527, @diml)
 
 - Fix invalid library names in `dune-package` files. Only public names should
@@ -1576,7 +991,7 @@
   @TheLortex, review by @rgrinberg)
 
 - Add a variable `%{ignoring_promoted_rules}` that is `true` when
-  `--ignore-promoted-rules` is passed on the command line and false
+  `--ingore-promoted-rules` is passed on the command line and false
   otherwise (#2382, @diml)
 
 - Fix a bug in `future_syntax` where the characters `@` and `&` were
@@ -1596,7 +1011,7 @@
 - Fix coloring of error messages from the compiler (@diml, #2384)
 
 - Add warning `66` to default set of warnings starting for dune projects with
-  language version >= `1.11` (@rgrinberg, @diml, fixes #2299)
+  language verison >= `1.11` (@rgrinberg, @diml, fixes #2299)
 
 - Add (dialect ...) stanza
   (@nojb, #2404)
@@ -2173,9 +1588,8 @@
   help Windows builds where paths are limited in length (#1511, fixes
   #1497, @diml)
 
-- Fix interpretation of `%{env:<var>=<default>}` environment variables
-  under `setenv`. Also forbid dynamic environment names or values
-  (#1503, @rgrinberg).
+- Fix interpretation of environment variables under `setenv`. Also forbid
+  dynamic environment names or values (#1503, @rgrinberg).
 
 1.4.0 (10/10/2018)
 ------------------
@@ -2222,10 +1636,6 @@
   installed (#1391, @nojb)
 
 - Take argument to self_build_stubs_archive into account. (#1395, @nojb)
-
-- New variable form `%{env:<var>=<default>}` that expands to the environment
-  variable `<var>`, or `<default>` if not found. Example: `%{env:BIN=/usr/bin}`.
-  (#1305, @trefis)
 
 - Fix bad interaction between `env` customization and vendored
   projects: when a vendored project didn't have its own `env` stanza,
@@ -2546,7 +1956,7 @@
 - Add a `Configurator.V1.Flags` module that improves the flag reading/writing
   API (#840, @avsm)
 
-- Add a `tests` stanza that simplified defining regular and expect tests
+- Add a `tests` stanza that simlpified defining regular and expect tests
   (#822, @rgrinberg)
 
 - Change the `subst` subcommand to lookup the project name from the
@@ -3273,7 +2683,7 @@
 - Added support for aliases (#7, @rgrinberg)
 
 - Added support for compiling against multiple opam switch
-  simultaneously by writing a `jbuild-workspace` file
+  simultaneously by writing a `jbuild-worspace` file
 
 - Added support for OCaml 4.02.3
 

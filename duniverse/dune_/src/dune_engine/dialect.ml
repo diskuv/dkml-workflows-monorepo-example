@@ -1,41 +1,23 @@
-open Import
-module Action = Dune_lang.Action
+open! Import
 
 module File_kind = struct
   type t =
     { kind : Ml_kind.t
     ; extension : string
-    ; preprocess : (Loc.t * Action.t) option
-    ; format : (Loc.t * Action.t * string list) option
+    ; preprocess : (Loc.t * Action_dune_lang.t) option
+    ; format : (Loc.t * Action_dune_lang.t * string list) option
     }
 
-  let encode { kind; extension; preprocess; format } =
-    let open Dune_lang.Encoder in
-    let kind =
-      string
-      @@
-      match kind with
-      | Ml_kind.Impl -> "implementation"
-      | Ml_kind.Intf -> "interface"
-    in
-    list sexp
-      (kind
-      :: record_fields
-           [ field "extension" string extension
-           ; field_o "preprocess" Action.encode (Option.map ~f:snd preprocess)
-           ; field_o "format" Action.encode
-               (Option.map ~f:(fun (_, x, _) -> x) format)
-           ])
-
   let to_dyn { kind; extension; preprocess; format } =
-    let open Dyn in
+    let open Dyn.Encoder in
     record
       [ ("kind", Ml_kind.to_dyn kind)
       ; ("extension", string extension)
-      ; ("preprocess", option (fun (_, x) -> Action.to_dyn x) preprocess)
+      ; ( "preprocess"
+        , option (fun (_, x) -> Action_dune_lang.to_dyn x) preprocess )
       ; ( "format"
         , option
-            (fun (_, x, y) -> pair Action.to_dyn (list string) (x, y))
+            (fun (_, x, y) -> pair Action_dune_lang.to_dyn (list string) (x, y))
             format )
       ]
 end
@@ -48,30 +30,22 @@ type t =
 let name t = t.name
 
 let to_dyn { name; file_kinds } =
-  let open Dyn in
+  let open Dyn.Encoder in
   record
     [ ("name", string name)
     ; ("file_kinds", Ml_kind.Dict.to_dyn File_kind.to_dyn file_kinds)
     ]
 
-let encode { name; file_kinds } =
-  let open Dune_lang.Encoder in
-  let file_kind_stanzas =
-    let open Ml_kind in
-    List.map ~f:File_kind.encode
-      [ Dict.get file_kinds Intf; Dict.get file_kinds Impl ]
-  in
-  let fields = record_fields [ field "name" string name ] @ file_kind_stanzas in
-  list sexp (string "dialect" :: fields)
-
 let decode =
   let open Dune_lang.Decoder in
   let kind kind =
     let+ loc, extension = field "extension" (located string)
-    and+ preprocess = field_o "preprocess" (located Action.decode)
+    and+ preprocess = field_o "preprocess" (located Action_dune_lang.decode)
     and+ format =
       field_o "format"
-        (map ~f:(fun (loc, x) -> (loc, x, [])) (located Action.decode))
+        (map
+           ~f:(fun (loc, x) -> (loc, x, []))
+           (located Action_dune_lang.decode))
     in
     let extension =
       if String.contains extension '.' then
@@ -105,12 +79,12 @@ let ocaml =
       | Intf -> "--intf"
     in
     let module S = String_with_vars in
-    Action.chdir
-      (S.make_pform Loc.none (Var Workspace_root))
-      (Action.run
+    Action_dune_lang.chdir
+      (S.make_var Loc.none "workspace_root")
+      (Action_dune_lang.run
          (S.make_text Loc.none "ocamlformat")
          [ S.make_text Loc.none (flag_of_kind kind)
-         ; S.make_pform Loc.none (Var Input_file)
+         ; S.make_var Loc.none "input-file"
          ])
   in
   let file_kind kind extension =
@@ -132,17 +106,17 @@ let reason =
   let file_kind kind extension =
     let module S = String_with_vars in
     let preprocess =
-      Action.run
+      Action_dune_lang.run
         (S.make_text Loc.none "refmt")
         [ S.make_text Loc.none "--print"
         ; S.make_text Loc.none "binary"
-        ; S.make_pform Loc.none (Var Input_file)
+        ; S.make_var Loc.none "input-file"
         ]
     in
     let format =
-      Action.run
+      Action_dune_lang.run
         (S.make_text Loc.none "refmt")
-        [ S.make_pform Loc.none (Var Input_file) ]
+        [ S.make_var Loc.none "input-file" ]
     in
     { File_kind.kind
     ; extension
@@ -156,7 +130,9 @@ let reason =
 
 let ml_suffix { file_kinds = { Ml_kind.Dict.intf; impl }; _ } ml_kind =
   match (ml_kind, intf.preprocess, impl.preprocess) with
-  | Ml_kind.Intf, None, _ | Impl, _, None -> None
+  | Ml_kind.Intf, None, _
+  | Impl, _, None ->
+    None
   | _ -> Some (extension ocaml ml_kind)
 
 module DB = struct
@@ -188,8 +164,10 @@ module DB = struct
             || preprocess d Ml_kind.Intf <> None
             || impl = extension ocaml Ml_kind.Impl
                && intf = extension ocaml Ml_kind.Intf
-          then s
-          else { Ml_kind.Dict.impl; intf } :: s)
+          then
+            s
+          else
+            { Ml_kind.Dict.impl; intf } :: s)
       |> List.sort ~compare:(Ml_kind.Dict.compare String.compare)
     in
     t.extensions_for_merlin <- Some v;
@@ -233,8 +211,10 @@ module DB = struct
     Option.map
       ~f:(fun dialect ->
         let kind =
-          if dialect.file_kinds.intf.extension = extension then Ml_kind.Intf
-          else Ml_kind.Impl
+          if dialect.file_kinds.intf.extension = extension then
+            Ml_kind.Intf
+          else
+            Ml_kind.Impl
         in
         (dialect, kind))
       (String.Map.find by_extension extension)

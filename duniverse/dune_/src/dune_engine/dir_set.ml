@@ -1,4 +1,4 @@
-open Import
+open! Stdune
 
 type t0 =
   | Empty
@@ -24,7 +24,9 @@ let default = function
   | Nontrivial t -> t.default
 
 let exceptions = function
-  | Empty | Universal -> String.Map.empty
+  | Empty
+  | Universal ->
+    String.Map.empty
   | Nontrivial t -> t.exceptions
 
 let empty = Empty
@@ -36,8 +38,10 @@ let trivial = function
   | true -> Universal
 
 let create ~default ~here ~exceptions =
-  if String.Map.is_empty exceptions && here = default then trivial default
-  else Nontrivial { here; default; exceptions }
+  if String.Map.is_empty exceptions && here = default then
+    trivial default
+  else
+    Nontrivial { here; default; exceptions }
 
 let is_empty = function
   | Empty -> true
@@ -52,7 +56,9 @@ let merge_exceptions a b ~default ~f =
       let x = Option.value x ~default:(trivial a.default) in
       let y = Option.value y ~default:(trivial b.default) in
       match (default, f x y) with
-      | false, Empty | true, Universal -> None
+      | false, Empty
+      | true, Universal ->
+        None
       | _, res -> Some res)
 
 let merge_nontrivial a b ~f_one ~f_set =
@@ -63,15 +69,23 @@ let merge_nontrivial a b ~f_one ~f_set =
 
 let rec union x y =
   match (x, y) with
-  | Empty, v | v, Empty -> v
-  | Universal, _ | _, Universal -> Universal
+  | Empty, v
+  | v, Empty ->
+    v
+  | Universal, _
+  | _, Universal ->
+    Universal
   | Nontrivial x, Nontrivial y ->
     merge_nontrivial x y ~f_one:( || ) ~f_set:union
 
 let rec inter x y =
   match (x, y) with
-  | Universal, v | v, Universal -> v
-  | Empty, _ | _, Empty -> Empty
+  | Universal, v
+  | v, Universal ->
+    v
+  | Empty, _
+  | _, Empty ->
+    Empty
   | Nontrivial x, Nontrivial y ->
     merge_nontrivial x y ~f_one:( && ) ~f_set:inter
 
@@ -146,25 +160,30 @@ let singleton p = singleton' (Path.Local_gen.explode p)
 
 let rec is_subset t ~of_ =
   match (t, of_) with
-  | _, Universal | Empty, _ -> true
-  | Universal, _ | _, Empty -> false
+  | _, Universal
+  | Empty, _ ->
+    true
+  | Universal, _
+  | _, Empty ->
+    false
   | Nontrivial x, Nontrivial y ->
     ((not x.here) || y.here)
     && ((not x.default) || y.default)
     && String.Map.is_subset x.exceptions ~of_:y.exceptions ~f:is_subset
 
 let rec to_dyn =
-  let open Dyn in
+  let open Dyn.Encoder in
   function
-  | Empty -> variant "Empty" []
-  | Universal -> variant "Universal" []
+  | Empty -> constr "Empty" []
+  | Universal -> constr "Universal" []
   | Nontrivial { here; default; exceptions } ->
     let open Dyn in
     List
       (((match here with
         | true -> [ (".", String "true") ]
         | false -> [])
-       @ String.Map.to_list_map exceptions ~f:(fun s t -> (s, to_dyn t))
+       @ (String.Map.to_list exceptions
+         |> List.map ~f:(fun (s, t) -> (s, to_dyn t)))
        @
        match default with
        | false -> []
@@ -182,8 +201,10 @@ let toplevel_subdirs t =
   | Universal -> Infinite
   | Empty -> Finite String.Set.empty
   | Nontrivial t ->
-    if t.default then Infinite
-    else Finite (String.Set.of_list (String.Map.keys t.exceptions))
+    if t.default then
+      Infinite
+    else
+      Finite (String.Set.of_list (String.Map.keys t.exceptions))
 
 let of_list paths =
   union_all (List.map paths ~f:(fun p -> singleton' (Path.Local_gen.explode p)))

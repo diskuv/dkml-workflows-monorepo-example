@@ -1,4 +1,5 @@
-open Import
+open Stdune
+open Dune_engine
 
 module Pkg : sig
   val decode : Package.t Dune_lang.Decoder.t

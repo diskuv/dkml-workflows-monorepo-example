@@ -1,61 +1,29 @@
 ****************************
-Working on the Dune Codebase
+Working on the Dune codebase
 ****************************
 
 This section gives guidelines for working on Dune itself. Many of these are
-general guidelines specific to Dune. However, given that Dune is a
-large project developed by many different people, it's important to follow
-these guidelines in order to keep the project in a good
+general guidelines that are specific to Dune. However, given that Dune is a
+large project developed by many different people, it is important to follow
+these guidelines when working on Dune in order to keep the project in a good
 state and pleasant to work on for everybody.
 
-Bootstrapping
+Writing tests
 =============
 
-In order to build itself, Dune uses a micro dune written as a single
-``boot/duneboot.ml`` file. This micro build system cannot read ``dune`` files
-and instead has the configuration hard-coded in ``boot/libs.ml``. This latter
-file is automatically updated during development when we modify the ``dune``
-files in the repository. ``boot/duneboot.ml`` itself is built with a single
-invocation of ``ocamlopt`` or ``ocamlc`` via the ``bootstrap.ml`` ocaml script.
+Most of our tests are written as expectation style tests. While writing such
+tests, the developer write some code and then let the system insert the output
+produced during the execution of this code right next to the code in the source
+file.
 
-``boot/duneboot.ml`` builds a ``dune.exe`` binary at the root of the source
-tree and uses this binary to build everything else.
-
-``$ make dev`` takes care of bootstrapping if needed, but if you want to just
-run the bootstrapping step itself, build the ``dune.exe`` target with
-
-.. code:: sh
-
-   make dune.exe
-
-Once you've bootstrapped dune, you should be using it to develop dune itself.
-Here are the most common commands you'll be running:
-
-.. code:: sh
-
-   # to make sure everything compiles:
-   $ ./dune.exe build @check
-   # run all the tests
-   $ ./dune.exe runtest
-   # run a particular cram foo.t:
-   $ ./dune.exe build @foo
-
-Writing Tests
-=============
-
-Most of our tests are written as expectation-style tests. While creating such
-tests, the developer writes some code and then lets the system insert the output
-produced during the code execution. The system puts it right next 
-to the code in the source file.
-
-Once you write and commit a test, the system checks that the captured
-output matches the one produced by a fresh code execution. When the two
-don't match, the test fails. The system then displays a diff
+Once a test is written and committed, the system will check that the captured
+output is still the one produced by a fresh execution of the code. When the two
+don't match, the test is considered as failing and the system displays a diff
 between what was expected and what the code produced.
 
-We write both our unit tests and integration tests in this way. For unit tests,
-we use the ppx_expect_ framework, where we introduce tests via
-``let%expect_test``, and ``[%expect ...]`` nodes capture expectations:
+Both our unit tests and integration tests are written this way. For unit tests,
+we use the ppx_expect_ framework where tests are introduced via
+``let%expect_test`` and expectation are capture in ``[%expect ...]`` nodes:
 
 .. code:: ocaml
 
@@ -65,7 +33,7 @@ we use the ppx_expect_ framework, where we introduce tests via
         Hello, world!
       |}]
 
-For integration tests, we use a system similar to `Cram tests
+For integration tests, we use a system similar to `cram tests
 <https://bitheap.org/cram/>`_ for testing shell commands and their behavior:
 
 .. code:: bash
@@ -88,75 +56,52 @@ For integration tests, we use a system similar to `Cram tests
 Guidelines
 ----------
 
-As with any long running software project, code written by one person will 
-eventually be maintained by another. Just like normal code, it's 
-important to document tests, especially since test suites are most often
+As with any long running software project, code written by one person will
+always eventually end up being maintained by another. Just like normal code, it
+is important to document tests. Especially since test suites are most often
 composed of many individual tests that must be understood on their own.
 
-A well-written test case should be easily understood. A reader should be able
-to quickly understand what property the test is checking, how it's doing it, and
-how to convince oneself that the test outcome is the right one. A well-written
-test makes it easier for future maintainers to understand the test and react
+A well written test case should be easy to understand. A reader should be able
+to quickly understand what property the test is checking, how it is doing it and
+how to convince one-self that the test outcome is the right one. A well written
+test will make it easy for future maintainers to understand the test and react
 when the test breaks. Most often, the code will need to be adapted to preserve
-the existing behavior; however, in some rare cases, the test expectation will need
+the existing behavior, however in some rare cases the test expectation will need
 to be updated.
 
-It's crucial that each test case makes its purpose and logic crystal clear, so
-future maintainers know how to deal with it.
+It is crucial that each test cases makes it purpose and logic crystal clear so
+that future maintainers know how to deal with it.
 
 When writing a test, we generally have a good idea of what we want to test.
-Sometimes, we want to ensure a newly developed feature behaves as expected. 
-Other times, we want to add a reproduction case for a bug reported by a
-user to ensure future changes won't reintroduce the faulty behaviour. Just
+Sometimes, we want to test that a new feature we developed is behaving as we
+expect. Sometimes, we want to add a reproduction case for a bug reported by a
+user to make sure future changes won't re-introduce the faulty behaviour. Just
 like when programming, we turn such an idea into code, which is a formal
 language that a computer can understand. While another person reading this code
-might be able to follow and understand what the code does step by step, it
-isn't clear that they'll be able to reconstruct the original developer's idea. 
-Even worse, they might understand the code in a completely different way, which would lead
-them to update it incorrectly.
-
-Releasing Dune
-==============
-
-Dune's release process relies on dune-release_. Make sure you install and understand
-how this software works before proceeding. Publishing a release consists of two steps:
-
-* Updating ``CHANGES.md`` to reflect the version being published
-* Running ``$ make opam-release`` to create the release tarball. Then publish it to
-  GitHub and submit it to opam.
-
-Major & Feature Releases
-------------------------
-
-Given a new version `x.y.z`, a major release increments `x`, and a feature
-release increments `y`.  Such a release must be done from the `main` branch.
-Once you publish the release, be sure to publish a release branch named `x.y`.
-
-Point Releases
---------------
-
-Point releases increment the `z` in `x.y.z`. Such releases are done from the
-respective `x.y` branch of the respective feature release. Once released, 
-be sure to update `CHANGES` in the `main` branch.
+might be able to follow and understand what the code is doing step by step, it
+is not clear that they will be able to reconstruct the original idea the
+developer had in their mind when they originally wrote the code. What is worse,
+they might understand the code in a completely different way which would lead
+them to update it the wrong way.
 
 Adding Stanzas
 ==============
 
-Adding new stanzas is the most natural way to extend Dune with new features.
-Therefore, we try to make this as easy as possible. The minimal amount of steps
+Adding new stanzas is the most natural way to extend dune with new features.
+Therefore we try to make this as easy as possible. The minimal amount of steps
 to add a new stanza is:
 
 - Extend ``Stanza.t`` with a new constructor to represent the new stanza
-- Modify ``Dune_file`` to parse the Dune language into this constructor
-- Modify the rules to interpret this stanza into rules, usually done in
+- Modify ``Dune_file`` to parse the dune language into this constructor
+- Modify the rules  to interpret this stanza into rules. This is usually done in
   ``Gen_rules```
 
 Versioning
 ----------
 
-Dune is incredibly strict with versioning of new features, modifications
-visible to the user, and changes to existing rules. This means that any
-added stanza must be guarded behind the version of the Dune language in which it
+Dune is incredibly strict with versioning of new features, modifications that
+are visible to the user, and changes to existing rules. This means that any
+added stanza must be guarded behind the version of the dune language in which it
 was introduced. For example:
 
 .. code:: ocaml
@@ -166,8 +111,8 @@ was introduced. For example:
        and+ t = Cram_stanza.decode in
        [ Cram t ] )
 
-Here, Dune 2.7 introduced the Cram stanza, so the user must enable ``(lang
-dune 2.7)`` in their ``dune`` project file to use it.
+Here the cram stanza was introduced in dune 2.7, so the user must enable ``(lang
+dune 2.7)`` in their dune-project file to use it.
 
 ``since`` isn't the only primitive for making sure that versions are respected.
 See ``Dune_lang.Syntax`` for other commonly used functions.
@@ -175,20 +120,20 @@ See ``Dune_lang.Syntax`` for other commonly used functions.
 Experimental & Independent Extensions
 -------------------------------------
 
-Sometimes, Dune's versioning policy is too strict. For example, it doesn't work
+Sometimes, dune's versioning policy is too strict. For example, it does not work
 in the following situations:
 
-- When most Dune independent extensions only exist inside Dune for
-  development convenience, e.g., build rules for Coq. Such extensions
+- Mostly independent extensions of dune that only exist inside dune for
+  development convenience. For example, build rules for coq. Such extensions
   would like to impose their own versioning policy.
 
-- When experimental features cannot guarantee Dune's strict backwards
+- Experimental features that cannot yet guarantee dune's strict backwards
   compatibility. Such features may dropped or modified at any time.
 
-To handle both of these use cases, Dune allows the definition of new languages (with the
+To handle both of these use cases, dune allows to define new languages (with the
 same syntax). These languages have their own versioning scheme and their own
-stanzas (or fields). In Dune itself, ``Syntax.t`` represents such languages.
-Here's an example of how the Coq syntax is defined:
+stanzas (or fields). In dune itself, such languages are represented with
+``Syntax.t`` Here's an example of how the coq syntax is defined:
 
 .. code:: ocaml
 
@@ -196,22 +141,22 @@ Here's an example of how the Coq syntax is defined:
      Dune_lang.Syntax.create ~name:"coq" ~desc:"the coq extension (experimental)"
       [ ((0, 1), `Since (1, 9)); ((0, 2), `Since (2, 5)) ]
 
-The list provides which versions of the syntax are provided and which
-version of Dune introduced them.
+The list provides which versions of the syntax are provided, and in which
+version of dune they were introduced.
 
-Such languages must be enabled in the ``dune`` project file separately:
+Such languages must be enabled in the dune-project separately:
 
 .. code:: scheme
 
-   (lang dune 3.4)
+   (lang dune 2.9)
    (using coq 0.2)
 
 If such extensions are experimental, it's recommended that they pass
 ``~experimental:true``, and that their versions are below 1.0.
 
-We also recommend that such extensions introduce stanzas or fields of the
-form ``ext_name.stanza_name`` or ``ext_name.field_name`` to clarify 
-which extensions provide a certain feature.
+It's also recommended that such extensions introduce stanzas or fields of the
+form ``ext_name.stanza_name`` or ``ext_name.field_name`` to make it clear to the
+user which extensions is providing a certain feature.
 
 Dune Rules
 ==========
@@ -219,24 +164,24 @@ Dune Rules
 Creating Rules
 --------------
 
-A Dune rule consists of 3 components:
+A dune rule consists of 3 components:
 
-- *Dependencies* that the rule may read when executed (files, aliases, etc.), 
-  described by ``'a Action_builder.t`` values.
+- Dependencies that the rule may read when executed (files, aliases, ..)
+  This is described by ``'a Build.t`` values
 
-- *Targets* that the rule produces (files and/or directories), 
-  described by ``'a Action_builder.With_targets.t'`` values.
+- Targets the rule produces (files)
+  Targets, in addition to dependencies is described by ``'a Build.With_targets.t'``
 
-- *Action* that Dune must execute (external programs, redirects, etc.).
-  Actions are represented by ``Action.t`` values.
+- Action that dune must execute (external programs, redirects, etc.)
+  Actions are represented by ``Action.t``
 
-Combined, one needs to produce an ``Action.t Action_builder.With_targets.t``
-value to create a rule. The rule may then be added by
-``Super_context.add_rule`` or a related function.
+Combined, one needs to produce a ``Action.t Build.With_targets.t`` value to
+create a rule. The rule may then be added by ``Super_context.add_rule``, or a
+related function.
 
 To make this maximally convenient, there's a ``Command`` module to make it
-easier to create actions that run external commands and describe their targets
-and dependencies simultaneously.
+easier to create actions that run external commands and describe their targets &
+dependencies simultaneously.
 
 Loading Rules
 -------------
@@ -251,31 +196,6 @@ algorithm that tries to load the rule that generates some target file `t`.
 
 - Look up the rule for `t` in this map.
 
-To adhere to this loading scheme, we must generate our rules as part
-of the callback that creates targets in that directory. See the ``Gen_rules``
+To adhere to this loading scheme, our rules must therefore be generated as part
+of the callback that generates targets in that directory. See the ``Gen_rules``
 module for how this callback is constructed.
-
-Documentation
-=============
-
-User documentation lives in the ``./doc`` directory.
-
-In order to build the user documentation, you must install python-sphinx_ and
-sphinx_rtd_theme_.
-
-Build the documentation with
-
-.. code:: sh
-
-   $ make doc
-
-For automatically updated builds, you can install sphinx-autobuild, and run
-
-.. code:: sh
-
-   $ make livedoc
-
-.. _python-sphinx: http://www.sphinx-doc.org/en/master/usage/installation.html
-.. _sphinx_rtd_theme: https://sphinx-rtd-theme.readthedocs.io/en/stable/
-.. _sphinx-autobuild: https://pypi.org/project/sphinx-autobuild/
-.. _dune-release: https://github.com/ocamllabs/dune-release

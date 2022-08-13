@@ -7,6 +7,7 @@ Aliases should not be resolved in vendored sub directories
 
   $ dune runtest --root duniverse
   Entering directory 'duniverse'
+          test alias tests/runtest
   Hello from main lib!
 
 When compiling vendored code, all warnings should be disabled
@@ -36,7 +37,7 @@ The same directory cannot be marked as both vendored and data-only
 
   $ dune build --root conflicts-with-data-only
   Entering directory 'conflicts-with-data-only'
-  Error: Directory dir was marked as data_only and vendored, it can't be marked
+  Error: Directory dir was marked as vendored and data_only, it can't be marked
   as both.
   [1]
 
@@ -59,7 +60,7 @@ The current directory cannot be marked as data-only
   1 | (data_only_dirs .)
                       ^
   Error: invalid sub-directory name "."
-  Hint: did you mean (data_only_dirs *)?
+  Hint: did you mean (data_only *)?
   [1]
 
 Only direct subdirectories can be marked as vendored
@@ -81,7 +82,7 @@ Only direct subdirectories can be marked as data-only
   1 | (data_only_dirs a/b/c)
                       ^^^^^
   Error: only immediate sub-directories may be specified.
-  Hint: to ignore a/b/c, write "(data_only_dirs c)" in a/b/dune
+  Hint: to ignore a/b/c, write "(data_only c)" in a/b/dune
   [1]
 
 Multiple direct subdirectories can be marked as data-only or vendored

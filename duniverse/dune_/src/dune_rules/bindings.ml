@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 open Dune_lang.Decoder
 
 type 'a one =
@@ -29,7 +30,7 @@ let empty = []
 let singleton x = [ Unnamed x ]
 
 let to_dyn dyn_of_a bindings =
-  let open Dyn in
+  let open Dyn.Encoder in
   Dyn.List
     (List.map bindings ~f:(function
       | Unnamed a -> dyn_of_a a
@@ -54,7 +55,8 @@ let decode elem =
     | Right x :: l -> loop vars (Unnamed x :: acc) l
     | Left (loc, name, values) :: l ->
       let vars =
-        if not (String.Set.mem vars name) then String.Set.add vars name
+        if not (String.Set.mem vars name) then
+          String.Set.add vars name
         else
           User_error.raise ~loc
             [ Pp.textf "Variable %s is defined for the second time." name ]
@@ -70,14 +72,3 @@ let encode encode bindings =
       | Named (name, bindings) ->
         Dune_lang.List
           (Dune_lang.atom (":" ^ name) :: List.map ~f:encode bindings)))
-
-let var_names t =
-  List.filter_map t ~f:(function
-    | Unnamed _ -> None
-    | Named (s, _) -> Some s)
-
-let to_pform_map t =
-  Pform.Map.of_list_exn
-    (List.filter_map t ~f:(function
-      | Unnamed _ -> None
-      | Named (name, l) -> Some (Pform.Var (User_var name), l)))

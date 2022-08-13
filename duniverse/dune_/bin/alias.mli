@@ -1,5 +1,4 @@
 open Stdune
-open Dune_engine
 
 type t = private
   { name : Dune_engine.Alias.Name.t
@@ -16,12 +15,10 @@ val in_dir :
   -> t
 
 val of_string :
-     Workspace_root.t
+     Common.t
   -> recursive:bool
   -> string
   -> contexts:Dune_rules.Context.t list
   -> t
 
 val pp : t -> _ Pp.t
-
-val request : t -> unit Action_builder.t

@@ -5,5 +5,6 @@ When using dune exec, the external-lib-deps command refers to the executable:
   3 |  (libraries does-not-exist))
                   ^^^^^^^^^^^^^^
   Error: Library "does-not-exist" not found.
-  -> required by _build/default/x.exe
+  Hint: try:
+    dune external-lib-deps --missing ./x.exe
   [1]

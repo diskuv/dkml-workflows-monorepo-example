@@ -1,32 +1,34 @@
+open! Dune_engine
+open! Stdune
 open Import
 open Dune_file
-open Memo.O
 
-(* CR-someday jeremiedimino: This should be a memoized function [Super_context.t
-   -> Package.t -> Path.Build.t list Memo.t]. *)
 let mlds_by_package_def =
+  let module Output = struct
+    type t = Path.Build.t list Package.Name.Map.t
+
+    let to_dyn _ = Dyn.Opaque
+  end in
   Memo.With_implicit_output.create "mlds by package"
-    ~implicit_output:Rules.implicit_output
+    ~implicit_output:Rules.implicit_output ~doc:"mlds by package"
     ~input:(module Super_context.As_memo_key)
+    ~output:(module Output)
+    ~visibility:Hidden Sync
     (fun sctx ->
-      let ctx = Super_context.context sctx in
-      let* dune_files = Only_packages.filtered_stanzas ctx in
-      Memo.parallel_map dune_files ~f:(fun dune_file ->
-          Memo.parallel_map dune_file.stanzas ~f:(function
-            | Documentation d ->
-              let dir = Path.Build.append_source ctx.build_dir dune_file.dir in
-              let* dc = Dir_contents.get sctx ~dir in
-              let+ mlds = Dir_contents.mlds dc d in
-              let name = Package.name d.package in
-              Some (name, mlds)
-            | _ -> Memo.return None)
-          >>| List.filter_opt)
-      >>| List.concat
-      >>| Package.Name.Map.of_list_reduce ~f:List.rev_append)
+      let stanzas = Super_context.stanzas sctx in
+      stanzas
+      |> List.concat_map ~f:(fun (w : _ Dir_with_dune.t) ->
+             List.filter_map w.data ~f:(function
+               | Documentation d ->
+                 let dc = Dir_contents.get sctx ~dir:w.ctx_dir in
+                 let mlds = Dir_contents.mlds dc d in
+                 let name = Package.name d.package in
+                 Some (name, mlds)
+               | _ -> None))
+      |> Package.Name.Map.of_list_reduce ~f:List.rev_append)
 
 let mlds_by_package = Memo.With_implicit_output.exec mlds_by_package_def
 
 (* TODO memoize this so that we can cutoff at the package *)
 let mlds sctx pkg =
-  let+ map = mlds_by_package sctx in
-  Package.Name.Map.find map pkg |> Option.value ~default:[]
+  Package.Name.Map.find (mlds_by_package sctx) pkg |> Option.value ~default:[]

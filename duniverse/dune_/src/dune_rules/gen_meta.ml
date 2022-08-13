@@ -1,3 +1,5 @@
+open! Dune_engine
+open! Stdune
 open Import
 open Meta
 
@@ -65,7 +67,6 @@ let archives ?(preds = []) lib =
   ]
 
 let gen_lib pub_name lib ~path ~version =
-  let open Memo.O in
   let info = Lib.info lib in
   let synopsis = Lib_info.synopsis info in
   let kind = Lib_info.kind info in
@@ -83,42 +84,18 @@ let gen_lib pub_name lib ~path ~version =
   let preds =
     match kind with
     | Normal -> []
-    | Ppx_rewriter _ | Ppx_deriver _ -> [ Pos "ppx_driver" ]
+    | Ppx_rewriter _
+    | Ppx_deriver _ ->
+      [ Pos "ppx_driver" ]
   in
-  let name lib =
-    let name = Lib.name lib in
-    match Lib_info.status (Lib.info lib) with
-    | Private (_, Some pkg) ->
-      Lib_name.mangled (Package.name pkg) (Lib_name.to_local_exn name)
-    | _ -> name
-  in
-  let to_names = Lib_name.Set.of_list_map ~f:name in
-  let* lib_deps = Resolve.Memo.read_memo (Lib.requires lib) >>| to_names in
-  let* ppx_rt_deps =
-    Lib.ppx_runtime_deps lib
-    |> Memo.bind ~f:Resolve.read_memo
-    |> Memo.map ~f:to_names
-  in
-  let+ ppx_runtime_deps_for_deprecated_method =
-    (* For the deprecated method, we need to put all the runtime dependencies of
-       the transitive closure.
-
-       We need to do this because [ocamlfind ocamlc -package ppx_foo] will not
-       look for the transitive dependencies of [foo], and the runtime
-       dependencies might be attached to a dependency of [foo] rather than [foo]
-       itself.
-
-       Sigh... *)
-    let open Resolve.Memo.O in
-    Lib.closure [ lib ] ~linking:false
-    >>= Resolve.Memo.List.concat_map ~f:Lib.ppx_runtime_deps
-    >>| to_names |> Resolve.Memo.read_memo
-  in
+  let lib_deps = Lib.Meta.requires lib in
+  let ppx_rt_deps = Lib.Meta.ppx_runtime_deps lib in
   List.concat
     [ version
     ; [ description desc; requires ~preds lib_deps ]
     ; archives ~preds lib
-    ; (if Lib_name.Set.is_empty ppx_rt_deps then []
+    ; (if Lib_name.Set.is_empty ppx_rt_deps then
+        []
       else
         [ Comment
             "This is what dune uses to find out the runtime dependencies of"
@@ -127,7 +104,8 @@ let gen_lib pub_name lib ~path ~version =
         ])
     ; (match kind with
       | Normal -> []
-      | Ppx_rewriter _ | Ppx_deriver _ ->
+      | Ppx_rewriter _
+      | Ppx_deriver _ ->
         (* Deprecated ppx method support *)
         let no_ppx_driver = Neg "ppx_driver"
         and no_custom_ppx = Neg "custom_ppx" in
@@ -137,7 +115,7 @@ let gen_lib pub_name lib ~path ~version =
                  preprocessors"
             ; Comment "and normal dependencies"
             ; requires ~preds:[ no_ppx_driver ]
-                ppx_runtime_deps_for_deprecated_method
+                (Lib.Meta.ppx_runtime_deps_for_deprecated_method lib)
             ]
           ; (match kind with
             | Normal -> assert false
@@ -172,14 +150,13 @@ let gen_lib pub_name lib ~path ~version =
     ]
 
 let gen ~(package : Package.t) ~add_directory_entry entries =
-  let open Memo.O in
   let version =
     match package.version with
     | None -> []
     | Some s -> [ rule "version" [] Set s ]
   in
-  let+ pkgs =
-    Memo.parallel_map entries ~f:(fun (e : Scope.DB.Lib_entry.t) ->
+  let pkgs =
+    List.map entries ~f:(fun (e : Super_context.Lib_entry.t) ->
         match e with
         | Library lib -> (
           let info = Lib.Local.info lib in
@@ -209,18 +186,14 @@ let gen ~(package : Package.t) ~add_directory_entry entries =
                 (pub_name, path)
               | _ -> (pub_name, path)
             in
-            let+ entries =
-              gen_lib pub_name ~path (Lib.Local.to_lib lib) ~version
-            in
-            (pub_name, entries))
+            (pub_name, gen_lib pub_name ~path (Lib.Local.to_lib lib) ~version))
         | Deprecated_library_name
             { old_name = old_public_name, _
             ; new_public_name = _, new_public_name
             ; _
             } ->
-          Memo.return
-            ( Pub_name.of_lib_name (Dune_file.Public_lib.name old_public_name)
-            , version @ [ requires (Lib_name.Set.singleton new_public_name) ] ))
+          ( Pub_name.of_lib_name (Dune_file.Public_lib.name old_public_name)
+          , version @ [ requires (Lib_name.Set.singleton new_public_name) ] ))
   in
   let pkgs =
     List.map pkgs ~f:(fun (pn, meta) ->
@@ -228,10 +201,7 @@ let gen ~(package : Package.t) ~add_directory_entry entries =
         | [] -> assert false
         | _package :: path -> (path, meta))
   in
-  let pkgs =
-    List.sort pkgs ~compare:(fun (a, _) (b, _) ->
-        List.compare ~compare:String.compare a b)
-  in
+  let pkgs = List.sort pkgs ~compare:(fun (a, _) (b, _) -> Poly.compare a b) in
   let rec loop name pkgs =
     let entries, sub_pkgs =
       List.partition_map pkgs ~f:(function
@@ -241,12 +211,14 @@ let gen ~(package : Package.t) ~add_directory_entry entries =
     let entries = List.concat entries in
     let subs =
       String.Map.of_list_multi sub_pkgs
-      |> String.Map.to_list_map ~f:(fun name pkgs ->
+      |> String.Map.to_list
+      |> List.map ~f:(fun (name, pkgs) ->
              let pkg = loop name pkgs in
              let pkg =
                if add_directory_entry then
                  { pkg with entries = directory name :: pkg.entries }
-               else pkg
+               else
+                 pkg
              in
              Package pkg)
     in

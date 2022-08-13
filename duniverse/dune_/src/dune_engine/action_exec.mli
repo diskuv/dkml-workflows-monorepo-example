@@ -1,4 +1,7 @@
-open Import
+open! Stdune
+
+(* For registering the cram_exec function. *)
+val cram_run : (env:Env.t -> script:Path.t -> unit Fiber.t) Fdecl.t
 
 (** Type for dependency requested by the dynamic action.
 
@@ -13,28 +16,22 @@ module Dynamic_dep : sig
 
   val compare : t -> t -> Ordering.t
 
-  module Map : Map.S with type key := t
-
   module Set : sig
-    include Set.S with type elt = t and type 'a map = 'a Map.t
+    include Set.S with type elt = t
 
     val to_dep_set : t -> Dep.Set.t
   end
 end
 
 module Exec_result : sig
-  type t = { dynamic_deps_stages : (Dynamic_dep.Set.t * Dep.Facts.t) List.t }
+  type t = { dynamic_deps_stages : Dynamic_dep.Set.t List.t }
 end
 
-(** [root] should be the root of the current build context, or the root of the
-    sandbox if the action is sandboxed. *)
 val exec :
-     targets:Targets.Validated.t option (* Some Jane Street actions use [None] *)
-  -> root:Path.t
+     targets:Path.Build.Set.t
   -> context:Build_context.t option
   -> env:Env.t
   -> rule_loc:Loc.t
-  -> build_deps:(Dep.Set.t -> Dep.Fact.t Dep.Map.t Fiber.t)
-  -> execution_parameters:Execution_parameters.t
+  -> build_deps:(Dep.Set.t -> unit Fiber.t)
   -> Action.t
   -> Exec_result.t Fiber.t

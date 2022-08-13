@@ -1,3 +1,4 @@
+open! Dune_engine
 open Import
 
 type applies_to =
@@ -10,7 +11,7 @@ type t =
   ; alias : Alias.Name.t option
   ; deps : Dep_conf.t Bindings.t option
   ; enabled_if : Blang.t
-  ; locks : Locks.t
+  ; locks : String_with_vars.t list
   ; package : Package.t option
   }
 

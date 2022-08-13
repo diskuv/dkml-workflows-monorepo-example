@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 module Pps : sig
   type 'a t =
@@ -13,11 +14,9 @@ end
 
 type 'a t =
   | No_preprocessing
-  | Action of Loc.t * Dune_lang.Action.t
+  | Action of Loc.t * Action_dune_lang.t
   | Pps of 'a Pps.t
   | Future_syntax of Loc.t
-
-val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
 val map : 'a t -> f:('a -> 'b) -> 'b t
 
@@ -35,8 +34,6 @@ module With_instrumentation : sig
         ; deps : Dep_conf.t list
         ; flags : String_with_vars.t list
         }
-
-  val equal : t -> t -> bool
 end
 
 val decode : Without_instrumentation.t t Dune_lang.Decoder.t
@@ -44,7 +41,7 @@ val decode : Without_instrumentation.t t Dune_lang.Decoder.t
 module Without_future_syntax : sig
   type 'a t =
     | No_preprocessing
-    | Action of Loc.t * Dune_lang.Action.t
+    | Action of Loc.t * Action_dune_lang.t
     | Pps of 'a Pps.t
 end
 
@@ -59,15 +56,13 @@ end
 val remove_future_syntax :
      'a t
   -> for_:Pp_flag_consumer.t
-  -> Ocaml.Version.t
+  -> Ocaml_version.t
   -> 'a Without_future_syntax.t
 
 module Per_module : sig
   type 'a preprocess = 'a t
 
   type 'a t = 'a preprocess Module_name.Per_item.t
-
-  val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
   val decode : Without_instrumentation.t t Dune_lang.Decoder.t
 
@@ -97,13 +92,13 @@ module Per_module : sig
   val with_instrumentation :
        With_instrumentation.t t
     -> instrumentation_backend:
-         (Loc.t * Lib_name.t -> Without_instrumentation.t option Resolve.Memo.t)
-    -> Without_instrumentation.t t Resolve.Memo.t
+         (Loc.t * Lib_name.t -> Without_instrumentation.t option)
+    -> Without_instrumentation.t t
 
   val instrumentation_deps :
        With_instrumentation.t t
     -> instrumentation_backend:
-         (Loc.t * Lib_name.t -> Without_instrumentation.t option Resolve.Memo.t)
-    -> Dep_conf.t list Resolve.Memo.t
+         (Loc.t * Lib_name.t -> Without_instrumentation.t option)
+    -> Dep_conf.t list
 end
 with type 'a preprocess := 'a t

@@ -38,10 +38,11 @@ module C_define : sig
 
   (** Import some #define from the given header files. For instance:
 
-      {v
-        # C.C_define.import c ~includes:"caml/config.h" ["ARCH_SIXTYFOUR", Switch];;
-        - (string * Configurator.C_define.Value.t) list = ["ARCH_SIXTYFOUR", Switch true]
-      v} *)
+      {[
+        # C.C_define.import c ~includes:"caml/config.h" ["ARCH_SIXTYFOUR",
+        Switch];; - (string * Configurator.C_define.Value.t) list =
+        ["ARCH_SIXTYFOUR", Switch true]
+      ]} *)
   val import :
        t
     -> ?prelude:string
@@ -55,9 +56,7 @@ module C_define : sig
   (** Generate a C header file containing the following #define.
       [protection_var] is used to enclose the file with:
 
-      {[
-        #ifndef BLAH #define BLAH ... #endif
-      ]}
+      {[ #ifndef BLAH #define BLAH ... #endif ]}
 
       If not specified, it is inferred from the name given to [create] and the
       filename. *)
@@ -145,9 +144,8 @@ module Process : sig
       logged.
 
       @param dir change to [dir] before running the command.
-      @param env
-        specify additional environment variables as a list of the form
-        NAME=VALUE. *)
+      @param env specify additional environment variables as a list of the form
+      NAME=VALUE. *)
   val run :
     t -> ?dir:string -> ?env:string list -> string -> string list -> result
 

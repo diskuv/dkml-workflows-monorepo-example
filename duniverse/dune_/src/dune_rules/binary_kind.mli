@@ -1,6 +1,7 @@
 (** Linking modes for binaries *)
+open! Dune_engine
 
-open Import
+open! Stdune
 
 type t =
   | C
@@ -9,8 +10,6 @@ type t =
   | Shared_object
   | Plugin
   | Js
-
-val compare : t -> t -> Ordering.t
 
 include Dune_lang.Conv.S with type t := t
 

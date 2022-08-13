@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open! Stdune
 
 module Ast = struct
   type ('k, 'v) t =

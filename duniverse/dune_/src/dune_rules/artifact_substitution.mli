@@ -21,20 +21,24 @@ type hardcoded_ocaml_path =
   | Relocatable of Path.t
 
 type conf = private
-  { get_vcs : Path.Source.t -> Vcs.t option Memo.t
+  { get_vcs : Path.Source.t -> Vcs.t option
   ; get_location : Section.t -> Package.Name.t -> Path.t
   ; get_config_path : configpath -> Path.t option
   ; hardcoded_ocaml_path : hardcoded_ocaml_path
         (** Initial prefix of installation when relocatable chosen *)
   }
 
-val conf_of_context : Context.t option -> conf
+val conf_of_context : Build_context.t option -> conf
 
 val conf_for_install :
-     relocatable:Path.t option
+     relocatable:bool
   -> default_ocamlpath:Path.t list
   -> stdlib_dir:Path.t
-  -> roots:Path.t Install.Section.Paths.Roots.t
+  -> prefix:Path.t
+  -> libdir:Path.t option
+  -> mandir:Path.t option
+  -> docdir:Path.t option
+  -> etcdir:Path.t option
   -> conf
 
 val conf_dummy : conf
@@ -52,13 +56,10 @@ val encode : ?min_len:int -> t -> string
 (** [decode s] returns the value [t] such that [encode t = s]. *)
 val decode : string -> t option
 
-(** Copy a file, performing all required substitutions. The operation is atomic,
-    i.e., the contents is first copied to a temporary file in the same directory
-    and then atomically renamed to [dst]. *)
+(** Copy a file, performing all required substitutions *)
 val copy_file :
      conf:conf
   -> ?chmod:(int -> int)
-  -> ?delete_dst_if_it_is_a_directory:bool
   -> src:Path.t
   -> dst:Path.t
   -> unit
@@ -80,5 +81,5 @@ val copy :
 (** Produce the string that would replace the placeholder with the given value .*)
 val encode_replacement : len:int -> repl:string -> string
 
-(** Test if a file contains a substitution placeholder. *)
+(** test if a file is in the given file *)
 val test_file : src:Path.t -> unit -> bool Fiber.t

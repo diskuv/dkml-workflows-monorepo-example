@@ -1,6 +1,6 @@
 (** Response file support *)
 
-open Import
+open Stdune
 
 type t =
   | Not_supported

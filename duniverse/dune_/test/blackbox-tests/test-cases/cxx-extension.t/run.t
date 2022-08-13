@@ -21,6 +21,7 @@
 
 * .cxx extension is allowed
   $ dune build
+           bar alias default
   n = 42
 
   $ echo "(lang dune 1.11)" > dune-project
@@ -43,6 +44,7 @@
 
   $ dune clean
   $ dune build
+           bar alias default
   n = 42
 
 * Compilation fails when baz.cpp and baz.cxx conflict
@@ -98,6 +100,7 @@ This works because the translation layer from pre-2.0 to 2.0 replaces
 
   $ dune clean
   $ dune build
+           bar alias default
   n = 42
 
 * Compilation fails when using :standard in Dune 2.0

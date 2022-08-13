@@ -1,4 +1,5 @@
 (** OCaml sources *)
+open! Dune_engine
 
 (** This module encapsulates the structure of source files in a particular
     directory. *)
@@ -16,7 +17,7 @@ end
 
 type t
 
-val artifacts : t -> Artifacts.t Memo.t
+val artifacts : t -> Artifacts.t
 
 type for_ =
   | Library of Lib_name.t  (** Library name *)
@@ -43,12 +44,10 @@ val empty : t
     with the correct [kind] *)
 
 val make :
-     Dune_file.t
-  -> dir:Path.Build.t
-  -> scope:Scope.t
+     Stanza.t list Dir_with_dune.t
   -> lib_config:Lib_config.t
   -> loc:Loc.t
-  -> lookup_vlib:(dir:Path.Build.t -> t Memo.t)
+  -> lookup_vlib:(dir:Path.Build.t -> t)
   -> include_subdirs:Loc.t * Dune_file.Include_subdirs.t
   -> dirs:(Path.Build.t * 'a list * String.Set.t) list
-  -> t Memo.t
+  -> t

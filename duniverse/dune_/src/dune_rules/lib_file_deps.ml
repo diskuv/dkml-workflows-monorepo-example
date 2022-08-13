@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 module Group = struct
   type t =
@@ -26,11 +27,11 @@ module Group = struct
           (* we cannot use globs because of bootstrapping. *)
           let id =
             lazy
-              (let open Dyn in
-              variant "Lib_file_deps" [ string ext ])
+              (let open Dyn.Encoder in
+              constr "Lib_file_deps" [ string ext ])
           in
           let pred =
-            Predicate_with_id.create ~id ~f:(fun p ->
+            Predicate.create ~id ~f:(fun p ->
                 String.equal (Filename.extension p) ext)
           in
           (g, pred))
@@ -39,7 +40,7 @@ module Group = struct
 end
 
 let deps_of_lib (lib : Lib.t) ~groups =
-  let obj_dir = Lib.info lib |> Lib_info.obj_dir in
+  let obj_dir = Lib.obj_dir lib in
   List.map groups ~f:(fun g ->
       let dir = Group.obj_dir g obj_dir in
       Group.to_predicate g |> File_selector.create ~dir |> Dep.file_selector)

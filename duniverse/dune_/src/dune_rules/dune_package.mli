@@ -1,6 +1,7 @@
 (** Representation of dune-package files *)
+open! Dune_engine
 
-open Import
+open! Stdune
 
 (** The filename of a dune-package file*)
 val fn : string
@@ -26,7 +27,7 @@ module Lib : sig
     -> modules:Modules.t
     -> t
 
-  val to_dyn : t Dyn.builder
+  val to_dyn : t Dyn.Encoder.t
 end
 
 module Deprecated_library_name : sig
@@ -36,7 +37,7 @@ module Deprecated_library_name : sig
     ; new_public_name : Lib_name.t
     }
 
-  val to_dyn : t Dyn.builder
+  val to_dyn : t Dyn.Encoder.t
 end
 
 module Entry : sig
@@ -58,7 +59,7 @@ module Entry : sig
 
   val loc : t -> Loc.t
 
-  val to_dyn : t Dyn.builder
+  val to_dyn : t Dyn.Encoder.t
 end
 
 type t =
@@ -68,10 +69,9 @@ type t =
   ; sections : Path.t Section.Map.t
   ; sites : Section.t Section.Site.Map.t
   ; dir : Path.t
-  ; files : (Section.t * Install.Dst.t list) list
   }
 
-val to_dyn : t Dyn.builder
+val to_dyn : t Dyn.Encoder.t
 
 module Or_meta : sig
   type nonrec t =
@@ -81,7 +81,7 @@ module Or_meta : sig
   val pp :
     dune_version:Dune_lang.Syntax.Version.t -> Format.formatter -> t -> unit
 
-  val load : Dpath.t -> t Or_exn.t Memo.t
+  val load : Dpath.t -> t Or_exn.t
 
-  val to_dyn : t Dyn.builder
+  val to_dyn : t Dyn.Encoder.t
 end

@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 module Select : sig
   module Choice : sig
@@ -22,8 +23,6 @@ type t =
   | Direct of (Loc.t * Lib_name.t)
   | Re_export of (Loc.t * Lib_name.t)
   | Select of Select.t
-
-val equal : t -> t -> bool
 
 val to_dyn : t -> Dyn.t
 

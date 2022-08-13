@@ -1,12 +1,13 @@
 (** Raw library descriptions *)
-
-open Import
+open! Dune_engine
 
 (** This module regroup all information about a library. We call such
     descriptions "raw" as the names, such as the names of dependencies are plain
     unresolved library names.
 
     The [Lib] module takes care of resolving library names to actual libraries. *)
+
+open Stdune
 
 module Status : sig
   type t =
@@ -242,6 +243,4 @@ val create :
 
 val package : _ t -> Package.Name.t option
 
-val to_dyn : 'path Dyn.builder -> 'path t Dyn.builder
-
-val equal : 'a t -> 'a t -> bool
+val to_dyn : 'path Dyn.Encoder.t -> 'path t Dyn.Encoder.t

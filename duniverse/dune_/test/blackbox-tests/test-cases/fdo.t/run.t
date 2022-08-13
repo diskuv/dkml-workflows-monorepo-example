@@ -1,4 +1,4 @@
-Prerequisites:
+Prerequisits:
 - external tool ocamlfdo that can be installed from opam
 - linux perf (called by ocamlfdo)
 - compiler version >= 4.10 (support for function

@@ -6,7 +6,7 @@
     of [Makefile.config]. *)
 type t
 
-val to_dyn : t Dyn.builder
+val to_dyn : t Stdune.Dyn.Encoder.t
 
 module Prog_and_args : sig
   type t =
@@ -54,7 +54,7 @@ module Ccomp_type : sig
     | Msvc
     | Other of string
 
-  val to_dyn : t -> Dyn.t
+  val to_dyn : t -> Stdune.Dyn.t
 
   val to_string : t -> string
 end
@@ -97,8 +97,6 @@ val bytecomp_c_libraries : t -> string list
 val native_c_compiler : t -> Prog_and_args.t
 
 val native_c_libraries : t -> string list
-
-val native_pack_linker : t -> Prog_and_args.t
 
 val cc_profile : t -> string list
 
@@ -184,11 +182,9 @@ module Value : sig
 
   val to_string : t -> string
 
-  val to_dyn : t Dyn.builder
+  val to_dyn : t Stdune.Dyn.Encoder.t
 end
 
 val to_list : t -> (string * Value.t) list
-
-val by_name : t -> string -> Value.t option
 
 val is_dev_version : t -> bool

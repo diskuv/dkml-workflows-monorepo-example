@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 
 val drop_source_extension :
      string
@@ -11,7 +12,7 @@ val possible_sources :
   -> dune_version:Dune_lang.Syntax.Version.t
   -> string list
 
-(* CR-soon cwong: I'd really prefer to keep the convention that these functions
+(* CR-soon cwong: I'd really prefer to keep the convension that these functions
    are spelled [Foreign_language.encode] and [Foreign_language.decode], but due
    to some organizational reasons (see the rant at the top of
    [foreign_language.mli]), these need to be here instead, as they cannot reside
@@ -138,7 +139,7 @@ module Library : sig
 end
 
 (** A foreign source file that has a [path] and all information of the
-    corresponding [Foreign.Stubs.t] declaration. *)
+    corresponnding [Foreign.Stubs.t] declaration. *)
 module Source : sig
   type t =
     { stubs : Stubs.t
@@ -164,8 +165,6 @@ module Sources : sig
 
   val object_files :
     t -> dir:Path.Build.t -> ext_obj:string -> Path.Build.t list
-
-  val has_cxx_sources : t -> bool
 
   (** A map from object names to lists of possible language/path combinations. *)
   module Unresolved : sig

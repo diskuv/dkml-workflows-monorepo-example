@@ -1,4 +1,5 @@
-open Import
+open! Dune_engine
+open Stdune
 open Coq_stanza
 
 (* TODO: Build reverse map and check duplicates, however, are duplicates
@@ -11,19 +12,12 @@ type t =
         (* [directories] is used to compute the include paths for Coq's native
            mode *)
   ; extract : Coq_module.t Loc.Map.t
-  ; rev_map :
-      [ `Theory of Theory.t | `Extraction of Extraction.t ] Coq_module.Map.t
   }
-
-let find_module ~source t =
-  let f m = Path.Build.equal source (Coq_module.source m) in
-  Coq_lib_name.Map.Multi.find_elt t.libraries ~f
 
 let empty =
   { libraries = Coq_lib_name.Map.empty
   ; directories = Coq_lib_name.Map.empty
   ; extract = Loc.Map.empty
-  ; rev_map = Coq_module.Map.empty
   }
 
 let coq_modules_of_files ~dirs =
@@ -56,12 +50,14 @@ let check_no_unqualified (loc, (qualif_mode : Dune_file.Include_subdirs.t)) =
 let extract t (stanza : Extraction.t) =
   Loc.Map.find_exn t.extract stanza.buildable.loc
 
-let of_dir stanzas ~dir ~include_subdirs ~dirs =
+let of_dir (d : _ Dir_with_dune.t) ~include_subdirs ~dirs =
   check_no_unqualified include_subdirs;
   let modules = coq_modules_of_files ~dirs in
-  List.fold_left stanzas ~init:empty ~f:(fun acc -> function
-    | Theory.T coq ->
-      let modules = Coq_module.eval ~dir coq.modules ~standard:modules in
+  List.fold_left d.data ~init:empty ~f:(fun acc -> function
+    | Coq_stanza.Theory.T coq ->
+      let modules =
+        Coq_module.eval ~dir:d.ctx_dir coq.modules ~standard:modules
+      in
       let directories =
         Coq_lib_name.Map.add_exn acc.directories (snd coq.name)
           (List.map dirs ~f:(fun (d, _, _) -> d))
@@ -69,13 +65,9 @@ let of_dir stanzas ~dir ~include_subdirs ~dirs =
       let libraries =
         Coq_lib_name.Map.add_exn acc.libraries (snd coq.name) modules
       in
-      let rev_map =
-        List.fold_left modules ~init:acc.rev_map ~f:(fun acc m ->
-            Coq_module.Map.add_exn acc m (`Theory coq))
-      in
-      { acc with directories; libraries; rev_map }
-    | Extraction.T extr ->
-      let loc, prelude = extr.prelude in
+      { acc with directories; libraries }
+    | Coq_stanza.Extraction.T extract ->
+      let loc, prelude = extract.prelude in
       let m =
         match
           List.find modules ~f:(fun m ->
@@ -86,9 +78,6 @@ let of_dir stanzas ~dir ~include_subdirs ~dirs =
           User_error.raise ~loc
             [ Pp.text "no coq source corresponding to prelude field" ]
       in
-      let extract = Loc.Map.add_exn acc.extract extr.buildable.loc m in
-      let rev_map = Coq_module.Map.add_exn acc.rev_map m (`Extraction extr) in
-      { acc with extract; rev_map }
+      let extract = Loc.Map.add_exn acc.extract extract.buildable.loc m in
+      { acc with extract }
     | _ -> acc)
-
-let lookup_module t m = Coq_module.Map.find t.rev_map m

@@ -1,30 +1,15 @@
-(** Actions as defined an executed by the build system.
-
-    These executions correpsond to primitives that the build system knows how to
-    execute. These usually, but not necessarily correspond to actions written by
-    the user in [Action_dune_lang.t] *)
-
+open! Stdune
 open! Import
 
 module Outputs : sig
-  include
-    module type of Dune_lang.Action.Outputs
-      with type t = Dune_lang.Action.Outputs.t
+  include module type of Action_intf.Outputs
+
+  val to_string : t -> string
 end
 
-module Inputs : sig
-  include
-    module type of Dune_lang.Action.Inputs
-      with type t = Dune_lang.Action.Inputs.t
+module Inputs : module type of struct
+  include Action_intf.Inputs
 end
-
-module File_perm : sig
-  include
-    module type of Dune_lang.Action.File_perm
-      with type t = Dune_lang.Action.File_perm.t
-end
-
-module Ext : module type of Action_intf.Ext
 
 (** result of the lookup of a program, the path to it or information about the
     failure and possibly a hint how to fix it *)
@@ -61,10 +46,14 @@ include
     with type path := Path.t
     with type target := Path.Build.t
     with type string := string
-    with type ext :=
-      (module Ext.Instance
-         with type target = Path.Build.t
-          and type path = Path.t)
+
+module Ast :
+  Action_intf.Ast
+    with type program = Prog.t
+    with type path = Path.t
+    with type target = Path.Build.t
+    with type string = string
+    with type t = t
 
 include
   Action_intf.Helpers
@@ -74,7 +63,7 @@ include
     with type string := string
     with type t := t
 
-include Monoid with type t := t
+val decode : t Dune_lang.Decoder.t
 
 module For_shell : sig
   include
@@ -83,7 +72,6 @@ module For_shell : sig
       with type path := string
       with type target := string
       with type string := string
-      with type ext := Dune_lang.t
 
   val encode : t Dune_lang.Encoder.t
 end
@@ -92,7 +80,7 @@ end
 val for_shell : t -> For_shell.t
 
 (** Return the list of directories the action chdirs to *)
-val chdirs : t -> Path.Build.Set.t
+val chdirs : t -> Path.Set.t
 
 (** The empty action that does nothing. *)
 val empty : t
@@ -100,8 +88,38 @@ val empty : t
 (** Checks, if action contains a [Dynamic_run]. *)
 val is_dynamic : t -> bool
 
-(** Re-root all the paths in the action to their sandbox version *)
-val sandbox : t -> Sandbox.t -> t
+(** Ast where programs are not yet looked up in the PATH *)
+module Unresolved : sig
+  type action = t
+
+  module Program : sig
+    type t =
+      | This of Path.t
+      | Search of Loc.t option * string
+
+    val of_string : dir:Path.t -> loc:Loc.t option -> string -> t
+  end
+
+  include
+    Action_intf.Ast
+      with type program := Program.t
+      with type path := Path.t
+      with type target := Path.Build.t
+      with type string := string
+
+  val resolve : t -> f:(Loc.t option -> string -> Path.t) -> action
+end
+with type action := t
+
+(** Return a sandboxed version of an action. It takes care of preparing deps in
+    the sandbox, but it does not copy the targets back out. It's the
+    responsibility of the caller to do that. *)
+val sandbox :
+     t
+  -> sandboxed:(Path.Build.t -> Path.Build.t)
+  -> mode:Sandbox_mode.some
+  -> deps:Dep.Set.t
+  -> t
 
 type is_useful =
   | Clearly_not
@@ -127,43 +145,3 @@ val is_useful_to_distribute : t -> is_useful
     but an action creating a symlink should not since the cache will reject it
     anyway. *)
 val is_useful_to_memoize : t -> is_useful
-
-module Full : sig
-  type action := t
-
-  (** A full action with its environment and list of locks *)
-  type t = private
-    { action : action
-    ; env : Env.t
-    ; locks : Path.t list
-    ; can_go_in_shared_cache : bool
-    ; sandbox : Sandbox_config.t
-    }
-
-  val make :
-       ?env:Env.t (** default [Env.empty] *)
-    -> ?locks:Path.t list (** default [\[\]] *)
-    -> ?can_go_in_shared_cache:bool (** default [true] *)
-    -> ?sandbox:Sandbox_config.t (** default [Sandbox_config.default] *)
-    -> action
-    -> t
-
-  val map : t -> f:(action -> action) -> t
-
-  (** The various [add_xxx] functions merge the given value with existing field
-      of the action. Put another way, [add_xxx x t] is the same as:
-
-      {[
-        combine t (make ~xxx:x (Progn []))
-      ]} *)
-
-  val add_env : Env.t -> t -> t
-
-  val add_locks : Path.t list -> t -> t
-
-  val add_sandbox : Sandbox_config.t -> t -> t
-
-  val add_can_go_in_shared_cache : bool -> t -> t
-
-  include Monoid with type t := t
-end

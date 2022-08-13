@@ -1,6 +1,5 @@
 (** Temp directory used by dune processes *)
-
-open Import
+open Stdune
 
 (** This returns a build path, but we don't rely on that *)
 val file : prefix:string -> suffix:string -> Path.t

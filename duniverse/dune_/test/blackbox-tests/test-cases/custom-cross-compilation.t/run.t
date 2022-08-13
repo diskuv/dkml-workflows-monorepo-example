@@ -1,15 +1,15 @@
   $ dune build --root ./normal --display short file @install
   Entering directory 'normal'
-      ocamldep .p.eobjs/p.ml.d
       ocamldep .p.eobjs/p.ml.d [cross]
-        ocamlc .p.eobjs/byte/p.{cmi,cmo,cmt}
+      ocamldep .p.eobjs/p.ml.d
         ocamlc .p.eobjs/byte/p.{cmi,cmo,cmt} [cross]
-      ocamlopt .p.eobjs/native/p.{cmx,o}
+        ocamlc .p.eobjs/byte/p.{cmi,cmo,cmt}
       ocamlopt .p.eobjs/native/p.{cmx,o} [cross]
-      ocamlopt p.exe
+      ocamlopt .p.eobjs/native/p.{cmx,o}
       ocamlopt p.exe [cross]
-             p file
+      ocamlopt p.exe
              p file [cross]
+             p file
 
   $ cat normal/_build/cross/file
   137

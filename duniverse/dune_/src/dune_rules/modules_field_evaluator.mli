@@ -1,7 +1,8 @@
 (** The modules field evaluator interprets the module sources into proper
     modules in a directory in the context of a stanza from a dune file. *)
+open! Dune_engine
 
-open Import
+open! Stdune
 
 module Virtual : sig
   type t = { virtual_modules : Ordered_set_lang.t }
