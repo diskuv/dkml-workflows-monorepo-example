@@ -119,13 +119,16 @@ jobs:
           # Prereqs for Dune building including cross-compiling with ocamlfind toolchains
           opamrun install dune ocamlfind --yes
 
-          # Build (no testing since problematic when cross-compiling unless we have emulators)
+          # Build and test on the host ABI. Don't do cross-compiled testing since can't run
+          # cross-compiled binaries unless we have emulators
+          opamrun exec -- dune build
+          opamrun exec -- dune runtest
+
+          # Cross-compile to one or more target ABI if the host ABI and DKML support it
           case "${{ matrix.dkml-host-abi }}" in
             darwin_*)
               opamrun exec -- dune build -x darwin_arm64
               ;;
-            *)
-              opamrun exec -- dune build
           esac
 
           # Copy the installed binaries (including cross-compiled ones) from Opam into dist/ folder.
