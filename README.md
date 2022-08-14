@@ -44,6 +44,9 @@ You can see an example workflow at https://github.com/diskuv/dkml-workflows-mono
 
 [1] `setup-dkml/macos-darwin_all` is doing double-duty: it is compiling x86_64 and arm64 systems.
 
+For news about Diskuv OCaml,
+[![Twitter URL](https://img.shields.io/twitter/url/https/twitter.com/diskuv.svg?style=social&label=Follow%20%40diskuv)](https://twitter.com/diskuv) on Twitter.
+
 ## Differences from the Opam Regular build flow
 
 * Opam Monorepo `pull` was used to pre-download all the Opam packages into the `duniverse/` directory
@@ -61,6 +64,15 @@ You can see an example workflow at https://github.com/diskuv/dkml-workflows-mono
   provides the ocamlfind toolchains. Is this just `x-opam-monorepo-opam-provided`?
 
 Tracked in [issue opam-monorepo#327](https://github.com/ocamllabs/opam-monorepo/issues/327)
+
+## Sponsor
+
+<a href="https://ocaml-sf.org">
+<img align="left" alt="OCSF logo" src="https://ocaml-sf.org/assets/ocsf_logo.svg"/>
+</a>
+Thanks to the <a href="https://ocaml-sf.org">OCaml Software Foundation</a>
+for economic support to the development of Diskuv OCaml.
+<p/>
 
 ## Status
 
