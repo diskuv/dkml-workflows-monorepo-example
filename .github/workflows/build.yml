@@ -70,11 +70,11 @@ jobs:
       - name: Build and test the monorepo package on Windows host
         if: startsWith(matrix.dkml_host_abi, 'windows_')
         shell: msys2 {0}
-        run: ci/monorepo-build-test.sh --opam-package your_example.opam --executable-name your_example
+        run: ci/build-test.sh --opam-package your_example.opam --executable-name your_example
 
       - name: Build and test the monorepo package on non-Windows host
         if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
-        run: ci/monorepo-build-test.sh --opam-package your_example.opam --executable-name your_example
+        run: ci/build-test.sh --opam-package your_example.opam --executable-name your_example
 
       - uses: actions/upload-artifact@v3
         with:

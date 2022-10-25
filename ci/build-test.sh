@@ -30,7 +30,7 @@ esac
 # shellcheck disable=SC2154
 echo "
 ======================
-monorepo-build-test.sh
+build-test.sh
 ======================
 .
 ---------
