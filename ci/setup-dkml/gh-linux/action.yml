@@ -3,7 +3,7 @@
 
 name: setup-dkml
 author: Diskuv, Inc.
-description: Build OCaml native executables for Darwin
+description: Build OCaml native executables for Linux
 
 # WARNING: The inputs.*.default seem to do nothing!
 # 2022-10-21: Unclear if warning still applies after move from a GitHub child workflow to a GitHub composite action
@@ -48,18 +48,33 @@ runs:
       # [matrix.dkml_host_abi] so that there is a single place to edit for variable changes.
       id: full_matrix_vars
       run: |
-        # Select correct Darwin matrix variables
+        # Select correct Linux matrix variables
         case "${{ matrix.dkml_host_abi }}" in
         
-        darwin_x86_64)
-          abi_pattern='macos-darwin_all';
-          gh_os='macos-latest';
+        linux_x86)
+          abi_pattern='manylinux2014-linux_x86';
+          gh_os='ubuntu-latest';
+          comment='(CentOS 7, etc.)';
           gh_unix_shell='sh';
           bootstrap_opam_version='2.2.0-dkml20220801T155940Z';
-          dkml_host_abi='darwin_x86_64';
-          opam_root='/Users/runner/.opam' ;;
+          dkml_host_abi='linux_x86';
+          opam_root='.ci/o';
+          in_docker='true';
+          dockcross_image='dockcross/manylinux2014-x86';
+          dockcross_run_extra_args='--platform linux/386' ;;
           
-        *)  echo "FATAL: Unsupported dkml_host_abi=$dkml_host_abi in Darwin action.yml"; exit 107 ;;
+        linux_x86_64)
+          abi_pattern='manylinux2014-linux_x86_64';
+          gh_os='ubuntu-latest';
+          comment='(CentOS 7, etc.)';
+          gh_unix_shell='sh';
+          bootstrap_opam_version='2.2.0-dkml20220801T155940Z';
+          dkml_host_abi='linux_x86_64';
+          opam_root='.ci/o';
+          dockcross_image='dockcross/manylinux2014-x64';
+          in_docker='true' ;;
+          
+        *)  echo "FATAL: Unsupported dkml_host_abi=$dkml_host_abi in Linux action.yml"; exit 107 ;;
         esac
 
         add() {
@@ -72,6 +87,14 @@ runs:
         add exe_ext "${exe_ext:-}"
         add bootstrap_opam_version "${bootstrap_opam_version:-}"
         add ocaml_options "${ocaml_options:-}"
+
+        add dockcross_image "${dockcross_image:-}"
+        add dockcross_run_extra_args "${dockcross_run_extra_args:-}"
+        add docker_runner "${docker_runner:-}"
+        add in_docker "${in_docker:-}"
+
+        #   GitHub Actions uses Docker Buildx, so use custom 'dkml-dockcross/*' cached image which speeds up builds
+        add dockcross_image_custom_prefix "dkml-"
 
     - name: Write POSIX shell and AWK scripts
       shell: bash
@@ -1074,6 +1097,36 @@ runs:
         path: .ci/sd4/bs
         key:
           "${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-bs-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}"
+
+    # ------
+    # BEGIN Docker (ManyLinux)
+    #   We use buildx which can cache into GitHub Actions Cache (type=gha)
+
+    - name: Set up Docker Buildx (ManyLinux)
+      if: steps.full_matrix_vars.outputs.dockcross_image != ''
+      id: buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Configure Docker (ManyLinux)
+      if: steps.full_matrix_vars.outputs.dockcross_image != ''
+      shell: bash
+      run: |
+        install -d .ci/sd4/dockcross-ctx
+        printf 'FROM %s\nRUN echo done fetching image' '${{ steps.full_matrix_vars.outputs.dockcross_image }}' > .ci/sd4/dockcross-ctx/Dockerfile
+
+    - name: Fetch dockcross image (ManyLinux)
+      if: steps.full_matrix_vars.outputs.dockcross_image != ''
+      uses: docker/build-push-action@v3
+      with:
+        context: .ci/sd4/dockcross-ctx
+        builder: "${{ steps.buildx.outputs.name }}"
+        load: true
+        tags: dkml-${{ steps.full_matrix_vars.outputs.dockcross_image }}
+        cache-from: type=gha,scope=${{ github.workflow }}
+        cache-to: type=gha,mode=max,scope=${{ github.workflow }}
+
+    # END Docker (ManyLinux)
+    # ------
 
     - name: Cache Opam root by (host,target)
       uses: actions/cache@v3
