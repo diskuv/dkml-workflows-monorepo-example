@@ -25,7 +25,7 @@ release:
   stage: deploy
   image: alpine
   script:
-    - apk install jq rsync curl
+    - apk add jq rsync curl
 
     # Make _release
     - ci/prepare-release.sh

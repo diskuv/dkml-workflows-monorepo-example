@@ -83,18 +83,19 @@ fi
 
 # -----------------------------------
 
+OPAM_PKGNAME=${OPAM_PACKAGE%.opam}
+
 # Prereqs for Dune building including cross-compiling with ocamlfind toolchains
 opamrun install dune ocamlfind --yes
 
 # Build and test on the host ABI. Don't do cross-compiled testing since can't run
 # cross-compiled binaries unless we have emulators
-opamrun exec -- dune build
-opamrun exec -- dune runtest
+opamrun exec -- dune build -p "${OPAM_PKGNAME}" --promote-install-files=false @install @runtest
 
 # Cross-compile to one or more target ABI if the host ABI and DKML support it
 case "${dkml_host_abi}" in
 darwin_*)
-  opamrun exec -- dune build -x darwin_arm64
+  opamrun exec -- dune build -p "${OPAM_PKGNAME}" -x darwin_arm64 --promote-install-files=false @install
   ;;
 esac
 
@@ -105,10 +106,10 @@ mv _build/install/default "_build/install/default.${dkml_host_abi}"
 set +f
 for i in _build/install/default.*; do
   target_abi=$(basename "$i" | sed s/default.//)
-  if [ -e "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" ]; then
-    install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" "dist/${target_abi}-${OPAM_PACKAGE}.exe"
+  if [ -e "_build/install/default.${target_abi}/bin/${OPAM_PKGNAME}.exe" ]; then
+    install -v "_build/install/default.${target_abi}/bin/${OPAM_PKGNAME}.exe" "dist/${target_abi}-${OPAM_PKGNAME}.exe"
   else
-    install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}" "dist/${target_abi}-${OPAM_PACKAGE}"
+    install -v "_build/install/default.${target_abi}/bin/${OPAM_PKGNAME}" "dist/${target_abi}-${OPAM_PKGNAME}"
   fi
 done
 
