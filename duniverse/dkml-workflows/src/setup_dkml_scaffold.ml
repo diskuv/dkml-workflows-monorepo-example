@@ -7,7 +7,7 @@ type gh_config = { gh_dir : string; gh_output_option : string }
 let gh_configs =
   [
     { gh_dir = "gh-darwin"; gh_output_option = "darwin" };
-    { gh_dir = "gh-linux"; gh_output_option = "darwin" };
+    { gh_dir = "gh-linux"; gh_output_option = "linux" };
     { gh_dir = "gh-windows"; gh_output_option = "windows" };
   ]
 

@@ -133,13 +133,14 @@ at least the following:
 #
 # Hint: If a file is causing you problems (ex. `fatal: BOM is required in ... if encoded as UTF-16`) use
 #       "View > Change File Encoding > Save with Encoding > UTF-16LE" in Visual Studio Code to save the file correctly.
-*.ps1 text working-tree-encoding=UTF-16 eol=CRLF
+*.ps1 text working-tree-encoding=UTF-16 eol=crlf
 ```
 
 FOURTH, generate scaffolding files:
 
 ```
 opam exec -- generate-setup-dkml-scaffold.exe
+dune build '@gen-dkml' --auto-promote
 ```
 
 FIFTH, add the scaffolding files to your source control. Assuming you use git, it would be:
