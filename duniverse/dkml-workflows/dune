@@ -1,0 +1,3 @@
+(dirs
+ ; add .github and .gitlab which are normally excluded because they start with a dot
+ (:standard .github .gitlab))

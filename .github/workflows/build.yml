@@ -2,160 +2,85 @@ name: Opam Monorepo - Build and Test
 
 env:
   OPAM_PACKAGE: "your_example"
+  DKML_COMPILER: "" # You can override the dkml-compiler package version. Example: 4.12.1-v1.0.2
 
 on:
   push:
     branches:
       - main
       - v*
+      - feature-*
     tags:
       - v*
+  # ... or trigger manually from GitHub web interface
+  workflow_dispatch:
 
 jobs:
-  setup-dkml:
-    uses: "diskuv/dkml-workflows/.github/workflows/setup-dkml.yml@v0"
-    with:
-      ocaml-compiler: 4.12.1
-
   build:
-    timeout-minutes: 90 # 1.5 hours
-
-    # Wait until `setup-dkml` is finished
-    needs: setup-dkml
-
-    # Five (5) build environments will be available. You can include
-    # all of them or a subset of them.
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows-2019
-            abi-pattern: win32-windows_x86
-            dkml-host-abi: windows_x86
-            opam-root: D:/.opam
-            default_shell: msys2 {0}
-            msys2_system: MINGW32
-            msys2_packages: mingw-w64-i686-pkg-config
-          - os: windows-2019
-            abi-pattern: win32-windows_x86_64
-            dkml-host-abi: windows_x86_64
-            opam-root: D:/.opam
-            default_shell: msys2 {0}
-            msys2_system: CLANG64
-            msys2_packages: mingw-w64-clang-x86_64-pkg-config
-          - os: macos-latest
-            abi-pattern: macos-darwin_all
-            dkml-host-abi: darwin_x86_64
-            opam-root: /Users/runner/.opam
-            default_shell: sh
-          - os: ubuntu-latest
-            abi-pattern: manylinux2014-linux_x86
-            dkml-host-abi: linux_x86
-            opam-root: .ci/opamroot
-            default_shell: sh
-          - os: ubuntu-latest
-            abi-pattern: manylinux2014-linux_x86_64
-            dkml-host-abi: linux_x86_64
-            opam-root: .ci/opamroot
-            default_shell: sh
+          - gh_os: windows-2019
+            abi_pattern: win32-windows_x86
+            dkml_host_abi: windows_x86
+          - gh_os: windows-2019
+            abi_pattern: win32-windows_x86_64
+            dkml_host_abi: windows_x86_64
+          - gh_os: ubuntu-latest
+            abi_pattern: manylinux2014-linux_x86
+            dkml_host_abi: linux_x86
+          - gh_os: ubuntu-latest
+            abi_pattern: manylinux2014-linux_x86_64
+            dkml_host_abi: linux_x86_64
+          - gh_os: macos-latest
+            abi_pattern: macos-darwin_all
+            dkml_host_abi: darwin_x86_64
 
-    runs-on: ${{ matrix.os }}
-    name: build / ${{ matrix.abi-pattern }}
-
-    # Use a Unix shell by default, even on Windows
-    defaults:
-      run:
-        shell: ${{ matrix.default_shell }}
-
-    env:
-      # Remove Homebrew warnings for macOS
-      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    runs-on: ${{ matrix.gh_os }}
+    name: build / ${{ matrix.abi_pattern }}
 
     steps:
-      # BOILERPLATE START: setup-dkml
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install MSYS2 to provide Unix shell (Windows only)
-        if: startsWith(matrix.dkml-host-abi, 'windows')
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.msys2_system }}
-          update: true
-          install: >-
-            ${{ matrix.msys2_packages }}
-            wget
-            make
-            rsync
-            diffutils
-            patch
-            unzip
-            git
-            tar
+      # The Setup DKML action will create the environment variables:
+      #   opam_root, exe_ext, dkml_host_abi, abi_pattern (and many more)
 
-      - name: Download setup-dkml artifacts
-        uses: actions/download-artifact@v3
+      - name: Setup DKML on a Windows host
+        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        uses: ./ci/setup-dkml/gh-windows
         with:
-          path: .ci/dist
+          DKML_COMPILER: ${{ env.DKML_COMPILER }}
 
-      - name: Import build environments from setup-dkml
-        run: |
-          ${{ needs.setup-dkml.outputs.import_func }}
-          import ${{ matrix.abi-pattern }}
-
-      - name: Cache Opam downloads by host
-        uses: actions/cache@v3
+      - name: Setup DKML on a Darwin host
+        if: startsWith(matrix.dkml_host_abi, 'darwin_')
+        uses: ./ci/setup-dkml/gh-darwin
         with:
-          path: ${{ matrix.opam-root }}/download-cache
-          key: ${{ matrix.dkml-host-abi }}
-      # BOILERPLATE END: setup-dkml
+          DKML_COMPILER: ${{ env.DKML_COMPILER }}
+
+      - name: Setup DKML on a Linux host
+        if: startsWith(matrix.dkml_host_abi, 'linux_')
+        uses: ./ci/setup-dkml/gh-linux
+        with:
+          DKML_COMPILER: ${{ env.DKML_COMPILER }}
 
       # BOILERPLATE START: setup-dkml for Opam Monorepo workflow
-      - name: Compile and cross-compile with Dune
-        run: |
-          #!/bin/sh
-          set -euf
 
-          # Prereqs for Dune building including cross-compiling with ocamlfind toolchains
-          opamrun install dune ocamlfind --yes
+      - name: Build and test the monorepo package on Windows host
+        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        shell: msys2 {0}
+        run: ci/monorepo-build-test.sh --opam-package your_example.opam --executable-name your_example
 
-          # Build and test on the host ABI. Don't do cross-compiled testing since can't run
-          # cross-compiled binaries unless we have emulators
-          opamrun exec -- dune build
-          opamrun exec -- dune runtest
-
-          # Cross-compile to one or more target ABI if the host ABI and DKML support it
-          case "${{ matrix.dkml-host-abi }}" in
-            darwin_*)
-              opamrun exec -- dune build -x darwin_arm64
-              ;;
-          esac
-
-          # Copy the installed binaries (including cross-compiled ones) from Opam into dist/ folder.
-          # Name the binaries with the target ABI since GitHub Releases are flat namespaces.
-          install -d dist/
-          mv _build/install/default _build/install/default.${{ matrix.dkml-host-abi }}
-          set +f
-          for i in _build/install/default.*; do
-            target_abi=$(basename $i | sed s/default.//)
-            if [ -e "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" ]; then
-              install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}.exe" "dist/${target_abi}-${OPAM_PACKAGE}.exe"
-            else
-              install -v "_build/install/default.${target_abi}/bin/${OPAM_PACKAGE}" "dist/${target_abi}-${OPAM_PACKAGE}"
-            fi
-          done
-
-          # For Windows you must ask your users to first install the vc_redist executable.
-          # Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
-          case "${{ matrix.dkml-host-abi }}" in
-            windows_x86_64) wget -O dist/vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
-            windows_x86)    wget -O dist/vc_redist.x86.exe https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
-          esac
+      - name: Build and test the monorepo package on non-Windows host
+        if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
+        run: ci/monorepo-build-test.sh --opam-package your_example.opam --executable-name your_example
 
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.dkml-host-abi }}
+          name: ${{ matrix.dkml_host_abi }}
           path: dist/
+
       # BOILERPLATE END: setup-dkml for Opam Monorepo workflow
 
   #--------
@@ -170,27 +95,15 @@ jobs:
     needs:
       - build
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - uses: actions/download-artifact@v3
         with:
           path: dist
 
-      - name: Remove setup artifacts
-        run: rm -rf setup-*
-        working-directory: dist
-
       - name: Restructure multi-ABI directories
-        run: |
-          _release="$(pwd)/_release"
-          install -d "$_release"
-
-          cd dist
-          find . -mindepth 1 -maxdepth 1 -type d | while read -r distname; do
-            rsync -av $distname/ "$_release"
-          done
-
-      - name: Display files to be distributed
-        run: ls -R
-        working-directory: _release
+        run: ci/prepare-release.sh
 
       - name: Release (only when Git tag pushed)
         uses: softprops/action-gh-release@v1
@@ -198,14 +111,3 @@ jobs:
         with:
           files: |
             _release/*
-
-      - name: Remove unneeded artifacts from GitHub Storage
-        uses: geekyeggo/delete-artifact@v1
-        with:
-          failOnError: false
-          name: |
-            setup-dkml-macos-darwin_all
-            setup-dkml-manylinux2014-linux_x86
-            setup-dkml-manylinux2014-linux_x86_64
-            setup-dkml-win32-windows_x86
-            setup-dkml-win32-windows_x86_64

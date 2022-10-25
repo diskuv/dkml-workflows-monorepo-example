@@ -23,10 +23,14 @@
  (depends
   dkml-base-compiler
   (dune
-  ; This is a pin of setup-dkml.
+   ; This is a pin of setup-dkml.
    (= 2.9.3))
   diskuvbox
-  conf-dkml-cross-toolchain)
+  conf-dkml-cross-toolchain
+  (dkml-workflows
+   (and
+    (>= 1.0.0)
+    :build)))
  (tags
   (topics "to describe" your project)))
 

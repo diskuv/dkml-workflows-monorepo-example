@@ -1,0 +1,21 @@
+# Test GitLab (GL) scripts
+
+include:
+  - local: 'test/gl/setup-dkml.gitlab-ci.yml'
+
+# Test personal computer (PC) scripts
+
+test-pc:
+  stage: build # no point waiting for the build phase of `local: 'test/gl/setup-dkml.gitlab-ci.yml'`
+  parallel:
+    matrix:
+      - dkml_host_abi: windows_x86
+      - dkml_host_abi: windows_x86_64
+
+  tags:
+    - shared-windows
+    - windows
+    - windows-1809
+
+  script:
+    - '& test\pc\setup-dkml-${env:dkml_host_abi}.ps1'

@@ -1,0 +1,51 @@
+include:
+  - local: 'ci/setup-dkml/gl/setup-dkml.gitlab-ci.yml'
+
+variables:
+  THE_OPAM_PACKAGE: your_example.opam
+  THE_EXECUTABLE_NAME: your_example
+
+  # Overrides of the included setup-dkml.gitlab-ci.yml
+  DKML_COMPILER: "" # You can override the dkml-compiler package version. Example: 4.12.1-v1.0.2
+
+build_linux:
+  script:
+    - ci/build-test.sh --opam-package "$THE_OPAM_PACKAGE" --executable-name "$THE_EXECUTABLE_NAME"
+
+# Exclude macOS until you have a https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/issues approved!
+# build_macos:
+#   script:
+#     - ci/build-test.sh --opam-package "$THE_OPAM_PACKAGE" --executable-name "$THE_EXECUTABLE_NAME"
+
+build_win32:
+  script:
+    - msys64\usr\bin\bash -lc "ci/build-test.sh --opam-package ${env:THE_OPAM_PACKAGE} --executable-name ${env:THE_EXECUTABLE_NAME}"
+
+release:
+  stage: deploy
+  image: alpine
+  script:
+    - apk install jq rsync curl
+
+    # Make _release
+    - ci/prepare-release.sh
+    
+    # Create public packages
+    - |
+      if [ -z "$CI_COMMIT_TAG" ]; then
+        PKGTAG="$CI_COMMIT_BRANCH"
+      elif [ -n "$CI_COMMIT_TAG" ]; then
+        PKGTAG=$(echo "$CI_COMMIT_TAG" | sed 's/^v//')
+      else
+        PKGTAG="$CI_COMMIT_SHORT_SHA"
+      fi
+
+    - CI_PROJECT_PATH_URLENCODED=$(printf %s "$CI_PROJECT_PATH" | jq -s -R -r @uri) # Must be url-encoded per https://docs.gitlab.com/ee/user/packages/generic_packages/
+    - PACKAGE_REGISTRY_URL="${CI_API_V4_URL}/projects/$CI_PROJECT_PATH_URLENCODED/packages/generic/$THE_EXECUTABLE_NAME/$PKGTAG"
+    - echo $PACKAGE_REGISTRY_URL
+    - |
+      GLAB_CURL_HEADER="JOB-TOKEN: ${CI_JOB_TOKEN}"
+      find _release -mindepth 1 -maxdepth 1 -type f | while read -r releasefile; do
+        curl --fail --header "$GLAB_CURL_HEADER" --upload-file "_release/$releasefile" "$PACKAGE_REGISTRY_URL/$releasefile"
+      done
+

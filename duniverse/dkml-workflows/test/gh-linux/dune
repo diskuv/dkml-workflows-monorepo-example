@@ -1,0 +1,12 @@
+(rule
+ (target action.gen.yml)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run ../../src/gh_setup_dkml_action_yml.exe --output-linux %{target}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff action.yml action.gen.yml)))

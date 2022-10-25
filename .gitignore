@@ -14,3 +14,11 @@ _build/
 
 # GitHub Actions
 /download-cache/
+
+#   direnv (https://direnv.net/)
+.envrc
+
+# PC setup-dkml target
+/msys64/
+/.ci/
+/.opam/

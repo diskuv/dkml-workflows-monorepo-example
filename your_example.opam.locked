@@ -3,7 +3,7 @@ synopsis: "opam-monorepo generated lockfile"
 maintainer: "opam-monorepo"
 depends: [
   "astring" {= "0.8.5+dune" & ?vendor}
-  "base" {= "v0.15.0" & ?vendor}
+  "base" {= "v0.15.1" & ?vendor}
   "base-bigarray" {= "base"}
   "base-bytes" {= "base"}
   "base-threads" {= "base"}
@@ -14,9 +14,11 @@ depends: [
   "cmdliner" {= "1.1.1+dune" & ?vendor}
   "conf-dkml-cross-toolchain" {= "4.12.1"}
   "cppo" {= "1.6.9" & ?vendor}
+  "crunch" {= "3.3.1" & ?vendor}
   "csexp" {= "1.5.1" & ?vendor}
   "diskuvbox" {= "0.1.0" & ?vendor}
   "dkml-base-compiler" {= "4.12.1~v1.0.0"}
+  "dkml-workflows" {= "1.0.0" & ?vendor}
   "dune" {= "2.9.3"}
   "dune-build-info" {= "2.9.3" & ?vendor}
   "dune-configurator" {= "2.9.3" & ?vendor}
@@ -26,6 +28,7 @@ depends: [
   "fmt" {= "0.9.0+dune" & ?vendor}
   "fpath" {= "0.7.3+dune" & ?vendor}
   "headache" {= "1.05" & ?vendor}
+  "jingoo" {= "1.4.4" & ?vendor}
   "logs" {= "0.7.0+dune2" & ?vendor}
   "lwt" {= "5.6.1" & ?vendor}
   "mdx" {= "2.1.0" & ?vendor}
@@ -45,6 +48,7 @@ depends: [
   "ppx_derivers" {= "1.2.1" & ?vendor}
   "ppx_deriving" {= "5.2.1" & ?vendor}
   "ppxlib" {= "0.27.0" & ?vendor}
+  "ptime" {= "1.0.0+dune2" & ?vendor}
   "re" {= "1.10.4" & ?vendor}
   "result" {= "1.5" & ?vendor}
   "rresult" {= "0.7.0+dune" & ?vendor}
@@ -63,8 +67,8 @@ pin-depends: [
     "https://github.com/dune-universe/astring/archive/v0.8.5+dune.tar.gz"
   ]
   [
-    "base.v0.15.0"
-    "https://ocaml.janestreet.com/ocaml-core/v0.15/files/base-v0.15.0.tar.gz"
+    "base.v0.15.1"
+    "https://github.com/janestreet/base/archive/refs/tags/v0.15.1.tar.gz"
   ]
   [
     "bos.0.2.1+dune"
@@ -87,12 +91,20 @@ pin-depends: [
     "https://github.com/ocaml-community/cppo/archive/v1.6.9.tar.gz"
   ]
   [
+    "crunch.3.3.1"
+    "https://github.com/mirage/ocaml-crunch/releases/download/v3.3.1/crunch-3.3.1.tbz"
+  ]
+  [
     "csexp.1.5.1"
     "https://github.com/ocaml-dune/csexp/releases/download/1.5.1/csexp-1.5.1.tbz"
   ]
   [
     "diskuvbox.0.1.0"
     "https://github.com/diskuv/diskuvbox/archive/0.1.0.tar.gz"
+  ]
+  [
+    "dkml-workflows.1.0.0"
+    "git+https://github.com/diskuv/dkml-workflows.git#0e580f1367526b8f117e3c730a5368c647450fef"
   ]
   [
     "dune-build-info.2.9.3"
@@ -124,6 +136,10 @@ pin-depends: [
   ]
   [
     "headache.1.05" "https://github.com/Frama-C/headache/archive/v1.05.tar.gz"
+  ]
+  [
+    "jingoo.1.4.4"
+    "https://github.com/tategakibunko/jingoo/archive/v1.4.4.tar.gz"
   ]
   [
     "logs.0.7.0+dune2"
@@ -187,6 +203,10 @@ pin-depends: [
     "https://github.com/ocaml-ppx/ppxlib/releases/download/0.27.0/ppxlib-0.27.0.tbz"
   ]
   [
+    "ptime.1.0.0+dune2"
+    "https://github.com/dune-universe/ptime/releases/download/v1.0.0%2Bdune2/ptime-1.0.0.dune2.tbz"
+  ]
+  [
     "re.1.10.4"
     "https://github.com/ocaml/ocaml-re/releases/download/1.10.4/re-1.10.4.tbz"
   ]
@@ -228,7 +248,9 @@ pin-depends: [
     "https://github.com/dune-universe/uutf/releases/download/v1.0.3%2Bdune/uutf-1.0.3.dune.tbz"
   ]
 ]
-x-opam-monorepo-cli-args: ["--ocaml-version=4.12.1"]
+x-opam-monorepo-cli-args: [
+  "your_example" "--ocaml-version=4.12.1" "--require-cross-compile" "-vv"
+]
 x-opam-monorepo-duniverse-dirs: [
   [
     "https://erratique.ch/software/cmdliner/releases/cmdliner-1.1.1.tbz"
@@ -278,6 +300,10 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
+    "git+https://github.com/diskuv/dkml-workflows.git#0e580f1367526b8f117e3c730a5368c647450fef"
+    "dkml-workflows"
+  ]
+  [
     "https://github.com/dune-universe/astring/archive/v0.8.5+dune.tar.gz"
     "astring"
     [
@@ -323,6 +349,14 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
+    "https://github.com/dune-universe/ptime/releases/download/v1.0.0%2Bdune2/ptime-1.0.0.dune2.tbz"
+    "ptime"
+    [
+      "sha256=10097ae4e8426f2e8cf64df150fb43179a7493a02e0ccef4f45124e3f08512a1"
+      "sha512=c49781faba1b9bf4cd01fe810e46354cdfa945f24642fb8aeabe2ab4a576717a18de7439b015f288ebaddcae9bde2fd01eff465c986a0e9ebcb2c82e8ce8d9b4"
+    ]
+  ]
+  [
     "https://github.com/dune-universe/rresult/releases/download/v0.7.0%2Bdune/rresult-0.7.0.dune.tbz"
     "rresult"
     [
@@ -363,6 +397,13 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
+    "https://github.com/janestreet/base/archive/refs/tags/v0.15.1.tar.gz"
+    "base"
+    [
+      "sha256=755e303171ea267e3ba5af7aa8ea27537f3394d97c77d340b10f806d6ef61a14"
+    ]
+  ]
+  [
     "https://github.com/janestreet/ocaml-compiler-libs/releases/download/v0.12.4/ocaml-compiler-libs-v0.12.4.tbz"
     "ocaml-compiler-libs"
     [
@@ -386,6 +427,14 @@ x-opam-monorepo-duniverse-dirs: [
     [
       "sha256=bf674de3312dee7b7215f07df1e8a96eb3d679164b8a918cdd95b8d97e505884"
       "sha512=147854c09f897dd028b18a9f19acea8666107aaa7b1aab3c92f568af531364f57298edcaf3897d74246d3857d52e9bfb7ad0fc39220d988d9f14694ca1d5e9ed"
+    ]
+  ]
+  [
+    "https://github.com/mirage/ocaml-crunch/releases/download/v3.3.1/crunch-3.3.1.tbz"
+    "ocaml-crunch"
+    [
+      "sha256=2c5ba0d4110bcbb7731cba4eafb6c44a7487c3f88c1ad47401271b69ffa8ed6a"
+      "sha512=5aaa1b67456dd2f5e3ab450ea547e62fba2b0341a49f3b24669162dce91b6ea1158c1594d60c6df3e416e719484411c50ae61017c40b2f75ee90401aa543bd08"
     ]
   ]
   [
@@ -498,6 +547,11 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
+    "https://github.com/tategakibunko/jingoo/archive/v1.4.4.tar.gz"
+    "jingoo"
+    ["md5=de3d7b0c53f4ae1bbce36687212b4309"]
+  ]
+  [
     "https://github.com/yoriyuki/Camomile/releases/download/1.0.2/camomile-1.0.2.tbz"
     "Camomile"
     [
@@ -522,13 +576,6 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
-    "https://ocaml.janestreet.com/ocaml-core/v0.15/files/base-v0.15.0.tar.gz"
-    "base"
-    [
-      "sha256=8657ae4324a9948457112245c49d97d2da95f157f780f5d97f0b924312a6a53d"
-    ]
-  ]
-  [
     "https://ocaml.janestreet.com/ocaml-core/v0.15/files/stdio-v0.15.0.tar.gz"
     "stdio"
     [
@@ -536,5 +583,6 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
 ]
+
 x-opam-monorepo-root-packages: ["your_example"]
 x-opam-monorepo-version: "0.3"

@@ -1,0 +1,3 @@
+(library
+ (name workflow_logic)
+ (libraries astring jingoo uutf))
