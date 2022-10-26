@@ -2,6 +2,7 @@ name: Opam Monorepo - Build and Test
 
 env:
   OPAM_PACKAGE: "your_example"
+  EXECUTABLE_NAME: "your_example"
   DKML_COMPILER: "" # You can override the dkml-compiler package version. Example: 4.12.1-v1.0.2
 
 on:
@@ -70,11 +71,11 @@ jobs:
       - name: Build and test the monorepo package on Windows host
         if: startsWith(matrix.dkml_host_abi, 'windows_')
         shell: msys2 {0}
-        run: ci/build-test.sh --opam-package your_example.opam --executable-name your_example
+        run: ci/build-test.sh --opam-package ${{ env.OPAM_PACKAGE }} --executable-name ${{ env.EXECUTABLE_NAME }}
 
       - name: Build and test the monorepo package on non-Windows host
         if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
-        run: ci/build-test.sh --opam-package your_example.opam --executable-name your_example
+        run: ci/build-test.sh --opam-package ${{ env.OPAM_PACKAGE }} --executable-name ${{ env.EXECUTABLE_NAME }}
 
       - uses: actions/upload-artifact@v3
         with:
