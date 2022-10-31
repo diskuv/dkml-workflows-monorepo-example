@@ -1,13 +1,93 @@
 # setup-dkml
 #   Short form: sd4
   
+<#
+.SYNOPSIS
+
+Setup Diskuv OCaml (DKML) compiler on a desktop PC.
+
+.DESCRIPTION
+
+Setup Diskuv OCaml (DKML) compiler on a desktop PC.
+
+.PARAMETER PC_PROJECT_DIR
+Context variable for the project directory. Defaults to the current directory.
+
+.PARAMETER FDOPEN_OPAMEXE_BOOTSTRAP
+Input variable.
+
+.PARAMETER CACHE_PREFIX
+Input variable.
+
+.PARAMETER OCAML_COMPILER
+Input variable. -DKML_COMPILER takes priority. If -DKML_COMPILER is not set and -OCAML_COMPILER is set, then the specified OCaml version tag of dkml-compiler (ex. 4.12.1) is used.
+
+.PARAMETER DKML_COMPILER
+Input variable. Unspecified or blank is the latest from the default branch (main) of dkml-compiler. @repository@ is the latest from Opam.
+
+.PARAMETER SECONDARY_SWITCH
+Input variable. If true then the secondary switch named 'two' is created, in addition to the always-present 'dkml' switch. 
+
+.PARAMETER CONF_DKML_CROSS_TOOLCHAIN
+Input variable. Unspecified or blank is the latest from the default branch (main) of conf-dkml-cross-toolchain. @repository@ is the latest from Opam.
+
+.PARAMETER DISKUV_OPAM_REPOSITORY
+Input variable. Defaults to the value of -DEFAULT_DISKUV_OPAM_REPOSITORY_TAG (see below)
+
+# autogen from global_env_vars.
+.PARAMETER DEFAULT_DKML_COMPILER
+Environment variable.
+
+.PARAMETER PIN_BASE
+Environment variable.
+
+.PARAMETER PIN_BIGSTRINGAF
+Environment variable.
+
+.PARAMETER PIN_CORE_KERNEL
+Environment variable.
+
+.PARAMETER PIN_CTYPES_FOREIGN
+Environment variable.
+
+.PARAMETER PIN_CTYPES
+Environment variable.
+
+.PARAMETER PIN_CURLY
+Environment variable.
+
+.PARAMETER PIN_DIGESTIF
+Environment variable.
+
+.PARAMETER PIN_DUNE
+Environment variable.
+
+.PARAMETER PIN_OCAMLBUILD
+Environment variable.
+
+.PARAMETER PIN_OCAMLFIND
+Environment variable.
+
+.PARAMETER PIN_OCP_INDENT
+Environment variable.
+
+.PARAMETER PIN_PPX_EXPECT
+Environment variable.
+
+.PARAMETER PIN_PTIME
+Environment variable.
+
+.PARAMETER PIN_TIME_NOW
+Environment variable.
+
+#>
 [CmdletBinding()]
 param (
   # Context variables
-  [Parameter()]
+  [Parameter(HelpMessage='Defaults to the current directory')]
   [string]
   $PC_PROJECT_DIR = $PWD,
-
+  
   # Input variables
   [Parameter()]
   [string]
@@ -20,13 +100,16 @@ param (
   $OCAML_COMPILER = "",
   [Parameter()]
   [string]
-  $DKML_COMPILER = "", # "@repository@" = Opam ; "" = latest from default branch ("main") of git clone
+  $DKML_COMPILER = "",
   [Parameter()]
   [string]
-  $CONF_DKML_CROSS_TOOLCHAIN = "@repository@", # "@repository@" = Opam ; "" = latest from default branch of git clone
+  $SECONDARY_SWITCH = "false",
   [Parameter()]
   [string]
-  $DISKUV_OPAM_REPOSITORY = "" # DEFAULT_DISKUV_OPAM_REPOSITORY_TAG is used as default for empty strings
+  $CONF_DKML_CROSS_TOOLCHAIN = "@repository@",
+  [Parameter()]
+  [string]
+  $DISKUV_OPAM_REPOSITORY = ""
 
   # Conflicts with automatic variable $Verbose
   # [Parameter()]
@@ -35,24 +118,32 @@ param (
     
   # Environment variables (can be overridden on command line)
   # autogen from global_env_vars.
-    ,[Parameter()] [string] $DEFAULT_DKML_COMPILER = "4.12.1-v1.0.2"
-    ,[Parameter()] [string] $PIN_BASE = "v0.14.3"
-    ,[Parameter()] [string] $PIN_BIGSTRINGAF = "0.8.0"
-    ,[Parameter()] [string] $PIN_CORE_KERNEL = "v0.14.2"
-    ,[Parameter()] [string] $PIN_CTYPES_FOREIGN = "0.19.2-windowssupport-r4"
-    ,[Parameter()] [string] $PIN_CTYPES = "0.19.2-windowssupport-r4"
-    ,[Parameter()] [string] $PIN_CURLY = "0.2.1-windows-env_r2"
-    ,[Parameter()] [string] $PIN_DIGESTIF = "1.0.1"
-    ,[Parameter()] [string] $PIN_DUNE = "2.9.3"
-    ,[Parameter()] [string] $PIN_OCAMLBUILD = "0.14.0"
-    ,[Parameter()] [string] $PIN_OCAMLFIND = "1.9.1"
-    ,[Parameter()] [string] $PIN_OCP_INDENT = "1.8.2-windowssupport"
-    ,[Parameter()] [string] $PIN_PPX_EXPECT = "v0.14.1"
-    ,[Parameter()] [string] $PIN_PTIME = "0.8.6-msvcsupport"
-    ,[Parameter()] [string] $PIN_TIME_NOW = "v0.14.0"
+  ,[Parameter()] [string] $DEFAULT_DKML_COMPILER = "4.12.1-v1.0.2"
+  ,[Parameter()] [string] $PIN_BASE = "v0.14.3"
+  ,[Parameter()] [string] $PIN_BIGSTRINGAF = "0.8.0"
+  ,[Parameter()] [string] $PIN_CORE_KERNEL = "v0.14.2"
+  ,[Parameter()] [string] $PIN_CTYPES_FOREIGN = "0.19.2-windowssupport-r4"
+  ,[Parameter()] [string] $PIN_CTYPES = "0.19.2-windowssupport-r4"
+  ,[Parameter()] [string] $PIN_CURLY = "0.2.1-windows-env_r2"
+  ,[Parameter()] [string] $PIN_DIGESTIF = "1.0.1"
+  ,[Parameter()] [string] $PIN_DUNE = "2.9.3"
+  ,[Parameter()] [string] $PIN_OCAMLBUILD = "0.14.0"
+  ,[Parameter()] [string] $PIN_OCAMLFIND = "1.9.1"
+  ,[Parameter()] [string] $PIN_OCP_INDENT = "1.8.2-windowssupport"
+  ,[Parameter()] [string] $PIN_PPX_EXPECT = "v0.14.1"
+  ,[Parameter()] [string] $PIN_PTIME = "0.8.6-msvcsupport"
+  ,[Parameter()] [string] $PIN_TIME_NOW = "v0.14.0"
 )
 
 $ErrorActionPreference = "Stop"
+
+# Reset environment so no conflicts with a parent Opam or OCaml system
+if (Test-Path Env:OPAMROOT)             { Remove-Item Env:OPAMROOT }
+if (Test-Path Env:OPAMSWITCH)           { Remove-Item Env:OPAMSWITCH }
+if (Test-Path Env:OPAM_SWITCH_PREFIX)   { Remove-Item Env:OPAM_SWITCH_PREFIX }
+if (Test-Path Env:CAML_LD_LIBRARY_PATH) { Remove-Item Env:CAML_LD_LIBRARY_PATH }
+if (Test-Path Env:OCAMLLIB)             { Remove-Item Env:OCAMLLIB }
+if (Test-Path Env:OCAML_TOPLEVEL_PATH)  { Remove-Item Env:OCAML_TOPLEVEL_PATH }
 
 # Pushdown context variables
 $env:PC_CI = 'true'
@@ -63,11 +154,14 @@ $env:FDOPEN_OPAMEXE_BOOTSTRAP = $FDOPEN_OPAMEXE_BOOTSTRAP
 $env:CACHE_PREFIX = $CACHE_PREFIX
 $env:OCAML_COMPILER = $OCAML_COMPILER
 $env:DKML_COMPILER = $DKML_COMPILER
+$env:SECONDARY_SWITCH = $SECONDARY_SWITCH
 $env:CONF_DKML_CROSS_TOOLCHAIN = $CONF_DKML_CROSS_TOOLCHAIN
 $env:DISKUV_OPAM_REPOSITORY = $DISKUV_OPAM_REPOSITORY
 
 # Set matrix variables
-# autogen from pc_matrix. only windows_x86_64
+# autogen from pc_vars. only windows_x86_64
+$env:dkml_host_os = "windows"
+$env:opam_root_cacheable = "${env:PC_PROJECT_DIR}/.ci/o"
 $env:abi_pattern = "win32-windows_x86_64"
 $env:msys2_system = "CLANG64"
 $env:msys2_packages = "mingw-w64-clang-x86_64-pkg-config"
@@ -134,7 +228,7 @@ else {
 Write-Host "Update MSYS2 ..."
 msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu' # Core update (in case any core packages are outdated)
 msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu' # Normal update
-taskkill /F /FI "MODULES eq msys-2.0.dll"
+if ("${env:CI}" -eq "true") { taskkill /F /FI "MODULES eq msys-2.0.dll" } # Only safe to kill MSYS2 in CI
 
 Write-Host "Install matrix, required and CI packages ..."
 #   Packages for GitLab CI:
@@ -362,9 +456,16 @@ escape_arg_as_ocaml_string() {
 # ---------------------------------------------------------------------
 
 # fixup opam_root on Windows to be mixed case
-opam_root_original=$opam_root
+original_opam_root=$opam_root
+original_opam_root_cacheable=$opam_root_cacheable
 if [ -x /usr/bin/cygpath ]; then
     opam_root=$(/usr/bin/cygpath -am "$opam_root")
+    opam_root_cacheable=$(/usr/bin/cygpath -am "$opam_root_cacheable")
+    unix_opam_root=$(/usr/bin/cygpath -au "$opam_root")
+    unix_opam_root_cacheable=$(/usr/bin/cygpath -au "$opam_root_cacheable")
+else
+    unix_opam_root=$opam_root
+    unix_opam_root_cacheable=$opam_root_cacheable
 fi
 
 # load VS studio environment
@@ -395,6 +496,7 @@ DISKUV_OPAM_REPOSITORY=${DISKUV_OPAM_REPOSITORY:-}
 DKML_COMPILER=${DKML_COMPILER:-}
 OCAML_COMPILER=${OCAML_COMPILER:-}
 CONF_DKML_CROSS_TOOLCHAIN=${CONF_DKML_CROSS_TOOLCHAIN:-}
+SECONDARY_SWITCH=${SECONDARY_SWITCH:-}
 VERBOSE=${VERBOSE:-}
 .
 -------------------
@@ -411,7 +513,11 @@ dkml_host_abi=$dkml_host_abi
 bootstrap_opam_version=$bootstrap_opam_version
 abi_pattern=$abi_pattern
 opam_root=${opam_root}
-opam_root_original=${opam_root_original}
+opam_root_cacheable=${opam_root_cacheable}
+original_opam_root=${original_opam_root}
+original_opam_root_cacheable=${original_opam_root_cacheable}
+unix_opam_root=${unix_opam_root}
+unix_opam_root_cacheable=${unix_opam_root_cacheable}
 dockcross_image=${dockcross_image:-}
 dockcross_image_custom_prefix=${dockcross_image_custom_prefix:-}
 dockcross_run_extra_args=${dockcross_run_extra_args:-}
@@ -577,28 +683,126 @@ section_end bootstrap-opam
 install -d .ci/sd4/dist
 tar cf .ci/sd4/dist/env-opam.tar -T /dev/null
 
+do_get_dockcross() {
+    if [ -n "${dockcross_image:-}" ]; then
+        # The dockcross script is super-slow
+        section_begin get-dockcross 'Get dockcross binary (ManyLinux)'
+        install -d .ci/sd4
+        #   shellcheck disable=SC2086
+        docker run ${dockcross_run_extra_args:-} --rm "${dockcross_image_custom_prefix:-}${dockcross_image:-}" >.ci/sd4/dockcross.gen
+
+        # PROBLEM 1
+        # ---------
+        # Super-annoying stderr output from dockcross at line:
+        #    tty -s && [ -z "$MSYS" ] && TTY_ARGS=-ti
+        # When there is no tty, get:
+        #   tty: ignoring all arguments
+        #   not a tty
+        # So replace 'tty -s &&' with 'false &&'
+        sed 's/tty -s &&/false \&\&/' .ci/sd4/dockcross.gen >.ci/sd4/dockcross-real
+        rm -f .ci/sd4/dockcross.gen
+        chmod +x .ci/sd4/dockcross-real
+
+        # PROBLEM 2
+        # ---------
+        # By default dockcross for ManyLinux will chown -R all python packages; super-slow (~10 seconds)!
+        # Confer: https://github.com/dockcross/dockcross/blob/master/manylinux-common/pre_exec.sh
+        # That kills speed for any repetitive dockcross invocation.
+        #
+        # BUT it is unnecessary to chown -R when the current user is root, because inside the Docker container
+        # the files are already root!
+        #
+        # The chown -R (within pre_exec.sh) is not run when the user ids are not passed in.
+        # Confer: https://github.com/dockcross/dockcross/blob/96d87416f639af0204bdd42553e4b99315ca8476/imagefiles/entrypoint.sh#L21-L53
+        #
+        # So explicitly call the entrypoint if root!
+        case "$dkml_host_abi" in
+        #       https://github.com/dockcross/dockcross/blob/master/linux-x86/linux32-entrypoint.sh
+        linux_x86)  dockcross_entrypoint=/dockcross/linux32-entrypoint.sh ;;
+        *)          dockcross_entrypoint=/dockcross/entrypoint.sh ;;
+        esac
+        cat > .ci/sd4/dockcross <<EOF
+#!/bin/bash
+set -euf
+BUILDER_UID="\$( id -u )"
+BUILDER_GID="\$( id -g )"
+if [ "\$BUILDER_UID" = 0 ] && [ "\$BUILDER_GID" = 0 ]; then
+    # ---------- Start of dockcross script snippet -------
+    # Verbatim from
+    # https://github.com/dockcross/dockcross/blob/96d87416f639af0204bdd42553e4b99315ca8476/imagefiles/dockcross#L175-L204
+    # except 1) disabling of USER_IDS
+
+    # Bash on Ubuntu on Windows
+    UBUNTU_ON_WINDOWS=\$([ -e /proc/version ] && grep -l Microsoft /proc/version || echo "")
+    # MSYS, Git Bash, etc.
+    MSYS=\$([ -e /proc/version ] && grep -l MINGW /proc/version || echo "")
+    # CYGWIN
+    CYGWIN=\$([ -e /proc/version ] && grep -l CYGWIN /proc/version || echo "")
+
+    #if [ -z "\$UBUNTU_ON_WINDOWS" -a -z "\$MSYS" -a "\$OCI_EXE" != "podman" ]; then
+    #    USER_IDS=(-e BUILDER_UID="\$( id -u )" -e BUILDER_GID="\$( id -g )" -e BUILDER_USER="\$( id -un )" -e BUILDER_GROUP="\$( id -gn )")
+    #fi
+
+    # Change the PWD when working in Docker on Windows
+    if [ -n "\$UBUNTU_ON_WINDOWS" ]; then
+        WSL_ROOT="/mnt/"
+        CFG_FILE=/etc/wsl.conf
+            if [ -f "\$CFG_FILE" ]; then
+                    CFG_CONTENT=\$(cat \$CFG_FILE | sed -r '/[^=]+=[^=]+/!d' | sed -r 's/\s+=\s/=/g')
+                    eval "\$CFG_CONTENT"
+                    if [ -n "\$root" ]; then
+                            WSL_ROOT=\$root
+                    fi
+            fi
+        HOST_PWD=\`pwd -P\`
+        HOST_PWD=\${HOST_PWD/\$WSL_ROOT//}
+    elif [ -n "\$MSYS" ]; then
+        HOST_PWD=\$PWD
+        HOST_PWD=\${HOST_PWD/\//}
+        HOST_PWD=\${HOST_PWD/\//:\/}
+    elif [ -n "\$CYGWIN" ]; then
+        for f in pwd readlink cygpath ; do
+            test -n "\$(type "\${f}" )" || { echo >&2 "Missing functionality (\${f}) (in cygwin)." ; exit 1 ; } ;
+        done ;
+        HOST_PWD="\$( cygpath -w "\$( readlink -f "\$( pwd ;)" ; )" ; )" ;
+    else
+        HOST_PWD=\$PWD
+        [ -L \$HOST_PWD ] && HOST_PWD=\$(readlink \$HOST_PWD)
+    fi
+
+    # ---------- End of dockcross script snippet -------
+
+    # Handle: dockcross --args "-v X:Y --platform P"
+    ARGS=
+    if [ "\$#" -ge 1 ] && [ "\$1" = "--args" ]; then
+        shift
+        ARGS=\$1
+        shift
+    fi
+
+    # Directly invoke entrypoint
+    exec docker run --entrypoint /bin/bash \
+        --rm \
+        \${ARGS:-} \
+         -v "\$HOST_PWD":/work \
+        ${dockcross_image_custom_prefix:-}${dockcross_image:-} ${dockcross_entrypoint} "\$@"
+else
+    HERE=\$(dirname "\$0")
+    HERE=\$(cd "\$HERE" && pwd)
+    exec "\$HERE/dockcross-real" "\$@"
+fi
+EOF
+        chmod +x .ci/sd4/dockcross
+
+        # Bundle for consumers of setup-dkml.yml
+        do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/dockcross .ci/sd4/dockcross-real
+
+        section_end get-dockcross
+    fi
+}
+do_get_dockcross
+
 if [ -n "${dockcross_image:-}" ]; then
-    section_begin get-dockcross 'Get dockcross binary (ManyLinux)'
-    install -d .ci/sd4
-    #   shellcheck disable=SC2086
-    docker run ${dockcross_run_extra_args:-} --rm "${dockcross_image_custom_prefix:-}${dockcross_image:-}" >.ci/sd4/dockcross.gen
-
-    # Super-annoying stderr output from dockcross at line:
-    #    tty -s && [ -z "$MSYS" ] && TTY_ARGS=-ti
-    # When there is no tty, get:
-    #   tty: ignoring all arguments
-    #   not a tty
-    # So replace 'tty -s &&' with 'false &&'
-    sed 's/tty -s &&/false \&\&/' .ci/sd4/dockcross.gen >.ci/sd4/dockcross
-    rm -f .ci/sd4/dockcross.gen
-
-    chmod +x .ci/sd4/dockcross
-
-    # Bundle for consumers of setup-dkml.yml
-    do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/dockcross
-
-    section_end get-dockcross
-
     # rsync needs to be available, even after Docker container disappears
     if [ ! -e .ci/sd4/bs/bin/rsync ]; then
         section_begin get-opam-prereqs-in-dockcross 'Get Opam prerequisites (ManyLinux)'
@@ -635,6 +839,43 @@ fi
         do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/bs/bin/rsync
     fi
 }
+
+# Get Opam Cache (also define saving cache here so can keep similar things close)
+#   * rsync requires Unix paths on MSYS2/Windows (ie. /c/o/blah rather than C:/o/blah)
+#     otherwise rsync thinks the paths are remote
+transfer_dir() {
+    transfer_dir_SRC=$1
+    shift
+    transfer_dir_DST=$1
+    shift
+    # Remove the destination directory completely, but make sure the parent of the
+    # destination directory exists so `mv` will work
+    install -d "$transfer_dir_DST"
+    rm -rf "$transfer_dir_DST"
+    # Move
+    mv "$transfer_dir_SRC" "$transfer_dir_DST"
+}
+do_get_opam_cache() {
+    if [ "$unix_opam_root_cacheable" = "$unix_opam_root" ]; then return; fi
+    if [ ! -e "$unix_opam_root_cacheable" ]; then return; fi
+    section_begin get-opam-cache "Transferring Opam cache to $original_opam_root_cacheable"
+    echo Starting transfer # need some output or GitLab CI will not display the section duration
+    transfer_dir "$unix_opam_root_cacheable" "$unix_opam_root"
+    echo Finished transfer
+    section_end get-opam-cache
+}
+do_save_opam_cache_rsync() {
+    rsync -a --exclude=.opam-switch/build/ "$@" "$unix_opam_root/" "$unix_opam_root_cacheable"
+}
+do_save_opam_cache() {
+    if [ "$unix_opam_root_cacheable" = "$unix_opam_root" ]; then return; fi
+    section_begin save-opam-cache "Transferring Opam cache to $original_opam_root"
+    echo Starting transfer # need some output or GitLab CI will not display the section duration
+    transfer_dir "$unix_opam_root" "$unix_opam_root_cacheable"
+    echo Finished transfer
+    section_end save-opam-cache
+}
+do_get_opam_cache
 
 # Setup Opam
 
@@ -711,6 +952,13 @@ export OPAMROOT=/work/${opam_root}
 export OPAMROOTISOK=1
 if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
 if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
+
+# Reset environment so no conflicts with a parent Opam or OCaml system
+unset OPAM_SWITCH_PREFIX
+unset OPAMSWITCH
+unset CAML_LD_LIBRARY_PATH
+unset OCAMLLIB
+unset OCAML_TOPLEVEL_PATH
 
 echo "Running inside Docker container: \$*" >&2
 set +e
@@ -793,6 +1041,13 @@ export OPAMROOTISOK=1
 if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
 if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
+# Reset environment so no conflicts with a parent Opam or OCaml system
+unset OPAM_SWITCH_PREFIX
+unset OPAMSWITCH
+unset CAML_LD_LIBRARY_PATH
+unset OCAMLLIB
+unset OCAML_TOPLEVEL_PATH
+
 echo "Running: \$*" >&2
 set +e
 "\$@"
@@ -852,7 +1107,7 @@ EOF
     # Bundle for consumers of setup-dkml.yml
     do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/opamrun
 }
-section_begin 'write-opam-scripts' 'Write and Distribute Opam scripts'
+section_begin 'write-opam-scripts' 'Write and distribute opam scripts'
 do_write_opam_scripts
 section_end 'write-opam-scripts'
 
@@ -878,7 +1133,7 @@ PATH="$setup_WORKSPACE/.ci/sd4/opamrun:$PATH"
 #   2. We have to separate the Opam download cache from the other Opam
 #      caches
 if [ ! -e "$opam_root/.ci.root-init" ]; then
-    section_begin opam-init 'Initialize Opam root'
+    section_begin opam-init 'Initialize opam root'
 
     # Clear any partial previous attempt
     rm -rf "$opam_root"
@@ -904,7 +1159,7 @@ if [ ! -e "$opam_root/.ci.root-init" ]; then
     section_end opam-init
 fi
 
-section_begin opam-vars "Opam variables"
+section_begin opam-vars "Summary: opam global variables"
 opamrun var --global || true
 section_end opam-vars
 
@@ -914,67 +1169,100 @@ section_end opam-vars
 # updates, so this step comes after the Opam switch cache load but before the
 # initial Opam switch creation.
 
-section_begin opam-repo "Opam repository"
+do_opam_repositories_config() {
+    do_opam_repositories_config_NAME=$1
+    shift
 
-if [ -x /usr/bin/cygpath ]; then
-    if [ -n "${RUNNER_TEMP:-}" ]; then
-        # GitHub Actions
-        TEMP=$(cygpath -am "$RUNNER_TEMP")
-    else
-        # GitLab CI/CD
-        install -d .ci/tmp
-        TEMP=$(cygpath -am ".ci/tmp")
+    section_begin "opam-repo-$do_opam_repositories_config_NAME" "Configure opam repositories"
+
+    if [ -x /usr/bin/cygpath ]; then
+        if [ -n "${RUNNER_TEMP:-}" ]; then
+            # GitHub Actions
+            TEMP=$(cygpath -am "$RUNNER_TEMP")
+        else
+            # GitLab CI/CD
+            install -d .ci/tmp
+            TEMP=$(cygpath -am ".ci/tmp")
+        fi
+        export TEMP
     fi
-    export TEMP
+    if [ ! -e "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init" ]; then
+        opamrun repository remove default --switch "$do_opam_repositories_config_NAME" --yes || true
+        opamrun repository remove diskuv --switch "$do_opam_repositories_config_NAME" --yes || true
+        opamrun repository add default https://opam.ocaml.org --switch "$do_opam_repositories_config_NAME" --yes
+        opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
+        touch "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init"
+    fi
+
+    # Whether .ci.repo-init or not, always set the `diskuv` repository url since it can change
+    opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
+    section_end "opam-repo-$do_opam_repositories_config_NAME"
+}
+do_opam_repositories_config dkml
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_opam_repositories_config two
 fi
-if [ ! -e "$opam_root/.ci.repo-init" ]; then
-    opamrun repository remove default --yes --all --dont-select || true
-    opamrun repository remove diskuv --yes --all --dont-select || true
-    opamrun repository add default https://opam.ocaml.org --yes --dont-select
-    opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
-    touch "$opam_root/.ci.repo-init"
-fi
 
-# Whether .ci.repo-init or not, always set the `diskuv` repository url since it can change
-opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
-# Update both `default` and `diskuv` Opam repositories
-opamrun update default diskuv
-section_end opam-repo
+do_opam_repositories_update() {
+    section_begin "opam-repo-update" "Update opam repositories"
+    # Update both `default` and `diskuv` Opam repositories
+    opamrun update default diskuv
+    section_end "opam-repo-update"
+}
+do_opam_repositories_update
 
-section_begin switch-create "Create Opam switch"
-# Create, or recreate, the Opam switch. The Opam switch should not be
-# cached except for the compiler (confer docs for setup-ocaml GitHub
-# Action) which is the 'dkml' switch
-# Check if the switch name is present in the Opam root (which may come from cache)
-NOMINALLY_PRESENT=false
-if opamrun switch list --short | grep '^dkml$'; then NOMINALLY_PRESENT=true; fi
+do_switch_create() {
+    do_switch_create_NAME=$1
+    shift
 
-# Check if the switch is actually present in case of cache incoherence
-# or corrupt Opam state that could result in:
-#   Error:  No config file found for switch dkml. Switch broken?
-if [ $NOMINALLY_PRESENT = true ] && [ ! -e "$opam_root/dkml/.opam-switch/switch-config" ]; then
-    # Remove the switch name from Opam root, and any partial switch state.
-    # Ignore inevitable warnings/failure about missing switch.
-    opamrun switch remove dkml --yes || true
-    rm -rf "$opam_root/dkml"
+    section_begin "switch-create-$do_switch_create_NAME" "Create opam switch $do_switch_create_NAME"
+    # Create, or recreate, the Opam switch. The Opam switch should not be
+    # cached except for the compiler (confer docs for setup-ocaml GitHub
+    # Action) which is the 'dkml' switch (or the 'two' switch).
+    # Check if the switch name is present in the Opam root (which may come from cache)
     NOMINALLY_PRESENT=false
-fi
+    if opamrun switch list --short | grep "^${do_switch_create_NAME}\$"; then NOMINALLY_PRESENT=true; fi
 
-if [ $NOMINALLY_PRESENT = false ]; then
-    opamrun switch create dkml --repos diskuv,default --empty --yes
+    # Check if the switch is actually present in case of cache incoherence
+    # or corrupt Opam state that could result in:
+    #   Error:  No config file found for switch dkml. Switch broken?
+    if [ $NOMINALLY_PRESENT = true ] && [ ! -e "$opam_root/$do_switch_create_NAME/.opam-switch/switch-config" ]; then
+        # Remove the switch name from Opam root, and any partial switch state.
+        # Ignore inevitable warnings/failure about missing switch.
+        opamrun switch remove "$do_switch_create_NAME" --yes || true
+        rm -rf "${opam_root:?}/$do_switch_create_NAME"
+        NOMINALLY_PRESENT=false
+    fi
+
+    if [ $NOMINALLY_PRESENT = false ]; then
+        opamrun switch create "$do_switch_create_NAME" --repos diskuv,default --empty --yes
+    fi
+    section_end "switch-create-$do_switch_create_NAME"
+}
+do_switch_create dkml
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_switch_create two
+else
+    # Always create a secondary switch ... just empty. Avoid problems with cache content missing
+    # and idempotency.
+    opamrun switch remove two --yes || true
+    rm -rf "$opam_root/two"
+    opamrun switch create two --empty --yes
 fi
-section_end switch-create
 
 do_pins() {
+    do_pins_NAME=$1
+    shift
+
     # dkml-base-compiler
 
     if [ "${DKML_COMPILER:-}" != '@repository@' ] && [ -z "${DKML_COMPILER:-}" ] && [ -z "${OCAML_COMPILER:-}" ]; then
-        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to default ${DEFAULT_DKML_COMPILER} (neither dkml-base-compiler nor OCAML_COMPILER specified)"
-        opamrun pin add --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DEFAULT_DKML_COMPILER}"
+        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to default ${DEFAULT_DKML_COMPILER} (neither dkml-base-compiler nor OCAML_COMPILER specified) for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DEFAULT_DKML_COMPILER}"
         section_end checkout-dkml-base-compiler
     elif [ "${DKML_COMPILER:-}" != '@repository@' ] && [ -n "${DKML_COMPILER:-}" ] && [ -z "${OCAML_COMPILER:-}" ]; then
-        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to $DKML_COMPILER (dkml-base-compiler specified; no OCAML_COMPILER specified)"
-        opamrun pin add --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DKML_COMPILER}"
+        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to $DKML_COMPILER (dkml-base-compiler specified; no OCAML_COMPILER specified) for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DKML_COMPILER}"
         section_end checkout-dkml-base-compiler
     elif [ -n "${OCAML_COMPILER:-}" ]; then
         # Validate OCAML_COMPILER (OCAML_COMPILER specified)
@@ -986,16 +1274,16 @@ do_pins() {
             ;;
         esac
 
-        section_begin checkoutdkml-base-compiler 'Pin dkml-base-compiler (OCAML_COMPILER specified)'
-        opamrun pin add --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${OCAML_COMPILER}-v${DKML_VERSION}"
+        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler (OCAML_COMPILER specified) for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${OCAML_COMPILER}-v${DKML_VERSION}"
         section_end checkout-dkml-base-compiler
     fi
 
     # conf-dkml-cross-toolchain
 
     if [ "${CONF_DKML_CROSS_TOOLCHAIN:-}" != '@repository@' ]; then
-        section_begin checkout-conf-dkml-cross-toolchain 'Pin conf-dkml-cross-toolchain'
-        opamrun pin add --yes --no-action conf-dkml-cross-toolchain "https://github.com/diskuv/conf-dkml-cross-toolchain.git#$CONF_DKML_CROSS_TOOLCHAIN"
+        section_begin checkout-conf-dkml-cross-toolchain "Pin conf-dkml-cross-toolchain for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action conf-dkml-cross-toolchain "https://github.com/diskuv/conf-dkml-cross-toolchain.git#$CONF_DKML_CROSS_TOOLCHAIN"
         section_end checkout-conf-dkml-cross-toolchain
     fi
 
@@ -1029,31 +1317,36 @@ do_pins() {
     #
     # - ppx_expect; only patch is for v0.14.1. Need to upstream fix the problem.
     # - base; patches for v0.14.1/2/3. Need to upstream fix the problem.
-    opamrun pin add --yes --no-action -k version base "${PIN_BASE}"
-    opamrun pin add --yes --no-action -k version bigstringaf "${PIN_BIGSTRINGAF}"
-    opamrun pin add --yes --no-action -k version core_kernel "${PIN_CORE_KERNEL}"
-    opamrun pin add --yes --no-action -k version ctypes "${PIN_CTYPES}"
-    opamrun pin add --yes --no-action -k version ctypes-foreign "${PIN_CTYPES_FOREIGN}"
-    opamrun pin add --yes --no-action -k version curly "${PIN_CURLY}"
-    opamrun pin add --yes --no-action -k version digestif "${PIN_DIGESTIF}"
-    opamrun pin add --yes --no-action -k version dune "${PIN_DUNE}"
-    opamrun pin add --yes --no-action -k version dune-configurator "${PIN_DUNE}"
-    opamrun pin add --yes --no-action -k version ocamlbuild "${PIN_OCAMLBUILD}"
-    opamrun pin add --yes --no-action -k version ocamlfind "${PIN_OCAMLFIND}"
-    opamrun pin add --yes --no-action -k version ocp-indent "${PIN_OCP_INDENT}"
-    opamrun pin add --yes --no-action -k version ppx_expect "${PIN_PPX_EXPECT}"
-    opamrun pin add --yes --no-action -k version ptime "${PIN_PTIME}"
-    opamrun pin add --yes --no-action -k version time_now "${PIN_TIME_NOW}"
+    section_begin "opam-pins-$do_pins_NAME" "Opam pins for $do_pins_NAME switch"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version base "${PIN_BASE}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version bigstringaf "${PIN_BIGSTRINGAF}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version core_kernel "${PIN_CORE_KERNEL}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ctypes "${PIN_CTYPES}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ctypes-foreign "${PIN_CTYPES_FOREIGN}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version curly "${PIN_CURLY}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version digestif "${PIN_DIGESTIF}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dune "${PIN_DUNE}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dune-configurator "${PIN_DUNE}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ocamlbuild "${PIN_OCAMLBUILD}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ocamlfind "${PIN_OCAMLFIND}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ocp-indent "${PIN_OCP_INDENT}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_expect "${PIN_PPX_EXPECT}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ptime "${PIN_PTIME}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version time_now "${PIN_TIME_NOW}"
+    section_end "opam-pins-$do_pins_NAME"
 }
 
-section_begin opam-pins 'Opam pins'
-do_pins
-section_end opam-pins
+do_pins dkml
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_pins two
+fi
 
 do_use_vsstudio() {
+    do_use_vsstudio_NAME=$1
+    shift
     case "$dkml_host_abi" in
     windows_*)
-        section_begin use-vsstudio 'Use Visual Studio in dkml-* Opam packages (Windows)'
+        section_begin "use-vsstudio-$do_use_vsstudio_NAME" "Use Visual Studio in dkml-* Opam packages (Windows) for $do_use_vsstudio_NAME switch"
 
         # shellcheck disable=SC2153
         E_VS_DIR=$(escape_arg_as_ocaml_string "$VS_DIR")
@@ -1072,7 +1365,7 @@ do_use_vsstudio() {
                 echo Opam 2.0 support in dockcross to use a portable opam var prefix not yet implemented
                 exit 67
             fi
-            OP=$(opamrun var prefix)
+            OP=$(opamrun var prefix --switch "$do_use_vsstudio_NAME")
             OPSC=$OP/.opam-switch/switch-config
             if grep setenv: "$OPSC"; then
                 echo "INFO: Updating switch-config. Old was:"
@@ -1094,44 +1387,61 @@ do_use_vsstudio() {
             cat "$OPSC" >&2 # print
             ;;
         *)
-            opamrun option setenv= # reset
-            opamrun option setenv+='DKML_COMPILE_SPEC = "1"'
-            opamrun option setenv+='DKML_COMPILE_TYPE = "VS"'
-            opamrun option setenv+="DKML_COMPILE_VS_DIR = \"$E_VS_DIR\""
-            opamrun option setenv+="DKML_COMPILE_VS_VCVARSVER = \"$E_VS_VCVARSVER\""
-            opamrun option setenv+="DKML_COMPILE_VS_WINSDKVER = \"$E_VS_WINSDKVER\""
-            opamrun option setenv+="DKML_COMPILE_VS_MSVSPREFERENCE = \"$E_VS_MSVSPREFERENCE\""
-            opamrun option setenv+="DKML_COMPILE_VS_CMAKEGENERATOR = \"$E_VS_CMAKEGENERATOR\""
-            opamrun option setenv+="DKML_HOST_ABI = \"${dkml_host_abi}\""
-            opamrun option setenv # print
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv= # reset
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+='DKML_COMPILE_SPEC = "1"'
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+='DKML_COMPILE_TYPE = "VS"'
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+="DKML_COMPILE_VS_DIR = \"$E_VS_DIR\""
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+="DKML_COMPILE_VS_VCVARSVER = \"$E_VS_VCVARSVER\""
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+="DKML_COMPILE_VS_WINSDKVER = \"$E_VS_WINSDKVER\""
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+="DKML_COMPILE_VS_MSVSPREFERENCE = \"$E_VS_MSVSPREFERENCE\""
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+="DKML_COMPILE_VS_CMAKEGENERATOR = \"$E_VS_CMAKEGENERATOR\""
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv+="DKML_HOST_ABI = \"${dkml_host_abi}\""
+            opamrun option --switch "$do_use_vsstudio_NAME" setenv # print
             ;;
         esac
 
         # shellcheck disable=SC2016
-        opamrun exec -- sh -c 'echo $VCToolsRedistDir'
+        opamrun exec --switch "$do_use_vsstudio_NAME" -- sh -c 'echo $VCToolsRedistDir'
 
-        section_end use-vsstudio
+        section_end "use-vsstudio-$do_use_vsstudio_NAME"
         ;;
     esac
 }
-do_use_vsstudio
+#   Make 'two' first so that 'dkml' is the final active switch.
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_use_vsstudio two
+fi
+do_use_vsstudio dkml
 
 do_install_compiler() {
-    section_begin install-compiler "Install OCaml compiler"
-    opamrun pin list
+    do_install_compiler_NAME=$1
+    shift
+    section_begin "install-compiler-$do_install_compiler_NAME" "Install OCaml compiler for $do_install_compiler_NAME switch"
+    opamrun pin list --switch "$do_install_compiler_NAME"
     # shellcheck disable=SC2086
-    opamrun upgrade --yes dkml-base-compiler conf-dkml-cross-toolchain ${ocaml_options:-}
-    section_end install-compiler
+    opamrun upgrade --switch "$do_install_compiler_NAME" --yes dkml-base-compiler conf-dkml-cross-toolchain ${ocaml_options:-}
+    section_end "install-compiler-$do_install_compiler_NAME"
 }
-do_install_compiler
+do_install_compiler dkml
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_install_compiler two
+fi
+
+# Done with Opam cache!
+do_save_opam_cache
 
 do_summary() {
-    section_begin summary "Summary"
-    opamrun var
-    opamrun exec -- ocamlc -config
-    section_end summary
+    do_summary_NAME=$1
+    shift
+    section_begin "summary-$do_summary_NAME" "Summary: $do_summary_NAME switch"
+    opamrun var --switch "$do_summary_NAME"
+    opamrun exec --switch "$do_summary_NAME" -- ocamlc -config
+    section_end "summary-$do_summary_NAME"
 }
-do_summary
+do_summary dkml
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_summary two
+fi
 
 '@
 Set-Content -Path ".ci\sd4\run-setup-dkml.sh" -Encoding Unicode -Value $Content
@@ -1263,6 +1573,9 @@ msys64\usr\bin\bash -lc "set | grep -v '^PATH=' | awk -f .ci/sd4/msvcenv.awk > .
 Set-Content -Path ".ci\sd4\get-msvcpath-into-msys2.cmd" -Encoding Default -Value $Content
 
 msys64\usr\bin\bash -lc "sh .ci/sd4/run-checkout-code.sh PC_PROJECT_DIR '${env:PC_PROJECT_DIR}'"
+if ($LASTEXITCODE -ne 0) {
+  throw "run-checkout-code.sh failed"
+}
 
 # Diagnose Visual Studio environment variables (Windows)
 # This wastes time and has lots of rows! Only run if "VERBOSE" GitHub input key.
@@ -1286,11 +1599,14 @@ msys64\usr\bin\bash -lc "dos2unix .ci/sd4/vsenv.sh"
 Get-Content .ci/sd4/vsenv.sh
 
 # Capture Visual Studio compiler environment
-msys64\usr\bin\bash -lc ". .ci/sd4/vsenv.sh && cmd /c .ci/sd4/get-msvcpath-into-msys2.cmd"
+msys64\usr\bin\bash -lc ". .ci/sd4/vsenv.sh && cmd /c '.ci\sd4\get-msvcpath-into-msys2.cmd'"
 msys64\usr\bin\bash -lc "cat .ci/sd4/msvcpath | tr -d '\r' | cygpath --path -f - | awk -f .ci/sd4/msvcpath.awk >> .ci/sd4/msvcenv"    
 msys64\usr\bin\bash -lc "tail -n100 .ci/sd4/msvcpath .ci/sd4/msvcenv"
 
 msys64\usr\bin\bash -lc "sh .ci/sd4/run-setup-dkml.sh PC_PROJECT_DIR '${env:PC_PROJECT_DIR}'"
+if ($LASTEXITCODE -ne 0) {
+  throw "run-setup-dkml.sh failed"
+}
 
 ########################### script ###############################
 
@@ -1298,15 +1614,16 @@ Write-Host @"
 Finished setup.
 
 To continue your testing, run in PowerShell:
-  \$env:CHERE_INVOKING = "yes"
-  \$env:MSYSTEM = "$env:msys2_system"
-  \$env:dkml_host_abi = "$env:dkml_host_abi"
-  \$env:abi_pattern = "$env:abi_pattern"
-  \$env:opam_root = "$env:opam_root"
-  \$env:exe_ext = "${env:exe_ext}"
-  \$env:PC_PROJECT_DIR = $PWD
+  `$env:CHERE_INVOKING = "yes"
+  `$env:MSYSTEM = "$env:msys2_system"
+  `$env:dkml_host_abi = "$env:dkml_host_abi"
+  `$env:abi_pattern = "$env:abi_pattern"
+  `$env:opam_root = "$env:opam_root"
+  `$env:exe_ext = "${env:exe_ext}"
+  `$env:PC_PROJECT_DIR = "$PWD"
 
-  msys64\usr\bin\bash -lc 'PATH="\$PWD/.ci/sd4/opamrun:\$PATH"; opamrun install XYZ.opam'
+Now you can use 'opamrun' to do opam commands like:
 
-Use can you any opam-like command you want.
+  msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun install XYZ.opam'
+  msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun exec -- sh ci/build-test.sh'
 "@
