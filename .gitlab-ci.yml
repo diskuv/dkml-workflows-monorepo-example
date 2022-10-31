@@ -8,16 +8,19 @@ variables:
   # Overrides of the included setup-dkml.gitlab-ci.yml
   DKML_COMPILER: "" # You can override the dkml-compiler package version. Example: 4.12.1-v1.0.2
 
-build_linux:
+linux:build:
+  extends: .linux:setup-dkml
   script:
     - ci/build-test.sh --opam-package "$THE_OPAM_PACKAGE" --executable-name "$THE_EXECUTABLE_NAME"
 
 # Exclude macOS until you have a https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/issues approved!
-# build_macos:
+# macos:build:
+#   extends: .macos:setup-dkml
 #   script:
 #     - ci/build-test.sh --opam-package "$THE_OPAM_PACKAGE" --executable-name "$THE_EXECUTABLE_NAME"
 
-build_win32:
+win32:build:
+  extends: .win32:setup-dkml
   script:
     - msys64\usr\bin\bash -lc "ci/build-test.sh --opam-package ${env:THE_OPAM_PACKAGE} --executable-name ${env:THE_EXECUTABLE_NAME}"
 

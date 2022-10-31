@@ -41,7 +41,7 @@ x-opam-monorepo-opam-provided: [
 ]
 pin-depends: [
   [
-    "dkml-workflows.1.0.0"
+    "dkml-workflows.1.1.0"
     "git+https://github.com/diskuv/dkml-workflows.git#v1"
   ]
 ]
