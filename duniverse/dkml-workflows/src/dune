@@ -1,13 +1,14 @@
 (rule
  (deps
   (glob_files tmpl/pc/*.ps1)
+  (glob_files tmpl/pc/*.sh)
   (glob_files tmpl/gh-darwin/*.yml)
   (glob_files tmpl/gh-linux/*.yml)
   (glob_files tmpl/gh-windows/*.yml)
   (glob_files tmpl/gl/*.yml))
  (target tmpl.ml)
  (action
-  (run ocaml-crunch -m plain -o %{target} tmpl/)))
+  (run ocaml-crunch -m plain -o %{target} tmpl)))
 
 (rule
  (deps
@@ -17,7 +18,7 @@
   (glob_files scripts/*.cmd))
  (target scripts.ml)
  (action
-  (run ocaml-crunch -m plain -o %{target} scripts/)))
+  (run ocaml-crunch -m plain -o %{target} scripts)))
 
 (library
  (name workflow_content)
@@ -31,14 +32,14 @@
 (executables
  (names gh_setup_dkml_action_yml gl_setup_dkml_yml pc_setup_dkml)
  (public_names
-  gh-setup-dkml-action-yml.exe
-  gl-setup-dkml-yml.exe
-  pc-setup-dkml.exe)
+  gh-setup-dkml-action-yml
+  gl-setup-dkml-yml
+  pc-setup-dkml)
  (modules gh_setup_dkml_action_yml gl_setup_dkml_yml pc_setup_dkml)
  (libraries jingoo workflow_arg workflow_content workflow_logic))
 
 (executable
  (name setup_dkml_scaffold)
- (public_name generate-setup-dkml-scaffold.exe)
+ (public_name generate-setup-dkml-scaffold)
  (modules setup_dkml_scaffold)
  (libraries bos uutf))

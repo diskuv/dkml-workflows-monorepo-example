@@ -1,3 +1,10 @@
+(* Useful `dune utop` expressions:
+
+
+   Workflow_logic.Model.vars_as_object ~filter_dkml_host_abi:(fun _s -> true) ~rewrite_name_value:Workflow_logic.Model.gl_rewrite_name_value ;;
+
+   Workflow_logic.Model.full_matrix_as_list ~filter_dkml_host_abi:(fun _s -> true) ~rewrite_name_value:Workflow_logic.Model.gl_rewrite_name_value ;;
+*)
 open Astring
 open Jingoo
 
@@ -50,25 +57,6 @@ let required_msys2_packages =
          "xz";
        ])
 
-(* USELESS! Only serves as documentation because there is no way to pass an array through GitLab CI/CD in a matrix
-   variable.
-
-   Jg_types.Tlist
-     [
-       Jg_types.Tstr "shared-windows";
-       Jg_types.Tstr "windows";
-       Jg_types.Tstr "windows-1809";
-     ]
-*)
-let gl_windows_tags_as_string =
-  Jg_types.Tstr "[shared-windows, windows, windows-1809]"
-
-(* USELESS! Only serves as documentation because there is no way to pass an array through GitLab CI/CD in a matrix
-   variable.
-
-   Jg_types.Tlist [ Jg_types.Tstr "shared-macos-amd64" ] *)
-let gl_macos_tags_as_string = Jg_types.Tstr "[shared-macos-amd64]"
-
 let bootstrap_opam_version = Jg_types.Tstr "2.2.0-dkml20220801T155940Z"
 
 let matrix =
@@ -84,11 +72,14 @@ let matrix =
 
        But GitLab CI can't cache anything unless it is in the project directory, so GitLab CI
        may encounter 260-character limit problems.
+
+      So the optional `opam_root_cacheable` (which defaults to `opam_root`) is different for
+      GitLab (gl) on Windows than `opam_root` so that the former can be in the project directory
+      while the latter is a short path that avoids 260 char limit.
     *)
     [
       ("abi_pattern", Jg_types.Tstr {|win32-windows_x86|});
       ("gh_os", Jg_types.Tstr {|windows-2019|} (* 2019 has Visual Studio 2019 *));
-      ("gl_tags", gl_windows_tags_as_string);
       ("gh_unix_shell", Jg_types.Tstr {|msys2 {0}|});
       ("msys2_system", Jg_types.Tstr {|MINGW32|});
       ("msys2_packages", Jg_types.Tstr {|mingw-w64-i686-pkg-config|});
@@ -97,7 +88,8 @@ let matrix =
       ("opam_abi", Jg_types.Tstr {|windows_x86|});
       ("dkml_host_abi", Jg_types.Tstr {|windows_x86|});
       ("gh_opam_root", Jg_types.Tstr {|D:/.opam|});
-      ("gl_opam_root", Jg_types.Tstr {|${CI_PROJECT_DIR}/.ci/o|});
+      ("gl_opam_root", Jg_types.Tstr {|C:/o|});
+      ("gl_opam_root_cacheable", Jg_types.Tstr {|${CI_PROJECT_DIR}/.ci/o|});
       ("pc_opam_root", Jg_types.Tstr {|${env:PC_PROJECT_DIR}/.ci/o|});
       ("vsstudio_hostarch", Jg_types.Tstr {|x64|});
       ("vsstudio_arch", Jg_types.Tstr {|x86|});
@@ -106,7 +98,6 @@ let matrix =
     [
       ("abi_pattern", Jg_types.Tstr {|win32-windows_x86_64|});
       ("gh_os", Jg_types.Tstr {|windows-2019|} (* 2019 has Visual Studio 2019 *));
-      ("gl_tags", gl_windows_tags_as_string);
       ("gh_unix_shell", Jg_types.Tstr {|msys2 {0}|});
       ("msys2_system", Jg_types.Tstr {|CLANG64|});
       ("msys2_packages", Jg_types.Tstr {|mingw-w64-clang-x86_64-pkg-config|});
@@ -115,7 +106,8 @@ let matrix =
       ("opam_abi", Jg_types.Tstr {|windows_x86_64|});
       ("dkml_host_abi", Jg_types.Tstr {|windows_x86_64|});
       ("gh_opam_root", Jg_types.Tstr {|D:/.opam|});
-      ("gl_opam_root", Jg_types.Tstr {|${CI_PROJECT_DIR}/.ci/o|});
+      ("gl_opam_root", Jg_types.Tstr {|C:/o|});
+      ("gl_opam_root_cacheable", Jg_types.Tstr {|${CI_PROJECT_DIR}/.ci/o|});
       ("pc_opam_root", Jg_types.Tstr {|${env:PC_PROJECT_DIR}/.ci/o|});
       ("vsstudio_hostarch", Jg_types.Tstr {|x64|});
       ("vsstudio_arch", Jg_types.Tstr {|x64|});
@@ -123,18 +115,8 @@ let matrix =
     (* Unnecessary to use VS 14.16, but it serves as a good template for
        other (future) VS versions.
        ;[("gh_os", Jg_types.Tstr "windows-2019"   (* 2019 has Visual Studio 2019 *))
-         ; ("gl_tags", gl_windows_tags)
          ; ("abi_pattern", Jg_types.Tstr {|win32_1416-windows_64|} (* VS2017 compiler available to VS2019 *))
-         ; ("gh_unix_shell", Jg_types.Tstr {|msys2 {0}|})
-         ; ("msys2_system", Jg_types.Tstr {|CLANG64|})
-         ; ("msys2_packages", Jg_types.Tstr {|mingw-w64-clang-x86_64-pkg-config|})
-         ; ("exe_ext", Jg_types.Tstr {|.exe|})
-         ; ("bootstrap_opam_version", bootstrap_opam_version)
-         ; ("opam_abi", Jg_types.Tstr {|windows_x86_64|})
-         ; ("dkml_host_abi", Jg_types.Tstr {|windows_x86_64|})
-         ; ("gh_opam_root", Jg_types.Tstr {|D:/.opam|})
-         ; ("gl_opam_root", Jg_types.Tstr {|${CI_PROJECT_DIR}/.ci/o|})
-         ; ("pc_opam_root", Jg_types.Tstr {|${env:PC_PROJECT_DIR}/.ci/o|})
+         ...
          ; ("vsstudio_hostarch", Jg_types.Tstr {|x64|})
          ; ("vsstudio_arch", Jg_types.Tstr {|x64|})
          ; ("vsstudio_dir", Jg_types.Tstr {|'C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise'|})
@@ -154,18 +136,8 @@ let matrix =
         Disabled because haven't done opam log dumps on failure for
         `opam upgrade`. See https://github.com/diskuv/dkml-component-ocamlcompiler/runs/6059642542?check_suite_focus=true
         ;[("gh_os", Jg_types.Tstr "windows-2022")
-          ; ("gl_tags", gl_windows_tags)
           ; ("abi_pattern", Jg_types.Tstr {|win32_2022-windows_x86_64|})
-          ; ("gh_unix_shell", Jg_types.Tstr {|msys2 {0}|})
-          ; ("msys2_system", Jg_types.Tstr {|CLANG64|})
-          ; ("msys2_packages", Jg_types.Tstr {|mingw-w64-clang-x86_64-pkg-config|})
-          ; ("exe_ext", Jg_types.Tstr {|.exe|})
-          ; ("bootstrap_opam_version", bootstrap_opam_version)
-          ; ("opam_abi", Jg_types.Tstr {|windows_x86_64|})
-          ; ("dkml_host_abi", Jg_types.Tstr {|windows_x86_64|})
-          ; ("gh_opam_root", Jg_types.Tstr {|D:/.opam|})
-          ; ("gl_opam_root", Jg_types.Tstr {|${CI_PROJECT_DIR}/.ci/o|})
-          ; ("pc_opam_root", Jg_types.Tstr {|${env:PC_PROJECT_DIR}/.ci/o|})
+          ...
           ; ("vsstudio_hostarch", Jg_types.Tstr {|x64|})
           ; ("vsstudio_arch", Jg_types.Tstr {|x64|})
           ; ("vsstudio_dir", Jg_types.Tstr {|'C:\Program Files\Microsoft Visual Studio\2022\Enterprise'|})
@@ -178,7 +150,6 @@ let matrix =
     [
       ("abi_pattern", Jg_types.Tstr {|macos-darwin_all|});
       ("gh_os", Jg_types.Tstr "macos-latest");
-      ("gl_tags", gl_macos_tags_as_string);
       ("gl_image", Jg_types.Tstr "macos-11-xcode-12");
       ("gh_unix_shell", Jg_types.Tstr {|sh|});
       ("bootstrap_opam_version", bootstrap_opam_version);
@@ -239,8 +210,8 @@ let matrix =
       ("gl_opam_root", Jg_types.Tstr {|.ci/o|});
       ("pc_opam_root", Jg_types.Tstr {|.ci/o|});
       ("in_docker", Jg_types.Tstr {|true|});
-      ("dockcross_image", Jg_types.Tstr {|dockcross/manylinux2014-x86|})
-      (* Gets rid of: WARNING: The requested image's platform (linux/386) does not match the detected host platform (linux/amd64) and no specific platform was requested *);
+      ("dockcross_image", Jg_types.Tstr {|dockcross/manylinux2014-x86|});
+      (* Gets rid of: WARNING: The requested image's platform (linux/386) does not match the detected host platform (linux/amd64) and no specific platform was requested *)
       ("dockcross_run_extra_args", Jg_types.Tstr {|--platform linux/386|});
     ]
     (* ("gh_os", ubuntu-latest
@@ -266,6 +237,9 @@ let matrix =
       ("gl_opam_root", Jg_types.Tstr {|.ci/o|});
       ("pc_opam_root", Jg_types.Tstr {|.ci/o|});
       ("dockcross_image", Jg_types.Tstr {|dockcross/manylinux2014-x64|});
+      (* Use explicit platform because setup-dkml.sh will bypass 'dockcross' script (which hardcodes the --platform)
+         when the invoking user is root. In that situation the following arguments are used. *)
+      ("dockcross_run_extra_args", Jg_types.Tstr {|--platform linux/amd64|});
       ("in_docker", Jg_types.Tstr {|true|});
     ];
   ]
@@ -274,9 +248,17 @@ module Aggregate = struct
   type t = {
     mutable dkml_host_os_opt : Jg_types.tvalue option;
     mutable dkml_host_abi_opt : string option;
+    mutable opam_root_opt : string option;
+    mutable opam_root_cacheable_opt : string option;
   }
 
-  let create () = { dkml_host_os_opt = None; dkml_host_abi_opt = None }
+  let create () =
+    {
+      dkml_host_os_opt = None;
+      dkml_host_abi_opt = None;
+      opam_root_opt = None;
+      opam_root_cacheable_opt = None;
+    }
 
   let capture ~name ~value t =
     let value_if_string value =
@@ -285,8 +267,12 @@ module Aggregate = struct
       else None
     in
     let value_as_string = value_if_string value in
-    (* Capture dkml_host_abi *)
-    if name = "dkml_host_abi" then t.dkml_host_abi_opt <- value_as_string;
+    (* Capture scalar values *)
+    (match name with
+    | "dkml_host_abi" -> t.dkml_host_abi_opt <- value_as_string
+    | "opam_root" -> t.opam_root_opt <- value_as_string
+    | "opam_root_cacheable" -> t.opam_root_cacheable_opt <- value_as_string
+    | _ -> ());
     (* Capture dkml_host_os *)
     match (name, Option.map (String.cuts ~sep:"_") value_as_string) with
     | "dkml_host_abi", Some (value_head :: _value_tail) ->
@@ -295,25 +281,51 @@ module Aggregate = struct
 
   let dkml_host_abi_opt t = t.dkml_host_abi_opt
 
+  let opam_root_opt t = t.opam_root_opt
+
+  let opam_root_cacheable_opt t = t.opam_root_cacheable_opt
+
   let dump t =
-    match (t.dkml_host_os_opt, t.dkml_host_abi_opt) with
-    | Some dkml_host_os, Some dkml_host_abi ->
+    match
+      ( t.dkml_host_os_opt,
+        t.dkml_host_abi_opt,
+        t.opam_root_opt,
+        t.opam_root_cacheable_opt )
+    with
+    | ( Some dkml_host_os,
+        Some dkml_host_abi,
+        Some opam_root,
+        opam_root_cacheable_opt ) ->
+        let opam_root_cacheable =
+          Option.fold ~none:opam_root
+            ~some:(fun opam_root_cacheable -> opam_root_cacheable)
+            opam_root_cacheable_opt
+        in
         [
           ("dkml_host_abi", Jg_types.Tstr dkml_host_abi);
           ("dkml_host_os", dkml_host_os);
+          ("opam_root", Jg_types.Tstr opam_root);
+          ("opam_root_cacheable", Jg_types.Tstr opam_root_cacheable);
         ]
+    | Some _, None, Some _, _ ->
+        failwith "Expected dkml_host_abi would be found"
+    | Some _, Some _, None, _ -> failwith "Expected opam_root would be found"
+    | None, Some _, Some _, _ ->
+        failwith "Expected dkml_host_os would be derived"
     | _ ->
         failwith
-          "Expected dkml_host_abi would be found and dkml_host_os would be \
-           derived"
+          "Expected dkml_host_abi and opam_root would be found and \
+           dkml_host_os would be derived"
 end
 
 (**
 
+  The field [opam_root_cacheable] will default to [opam_root] unless explicitly
+  set.
+
   {v
     { vars: [
         { name: "abi_pattern", value: 'win32-windows_x86' },
-        { name: "gl_tags", value: '[shared-windows, windows, windows-1809]' },
         { name: "gh_unix_shell", value: 'msys2 {0}' },
         { name: "msys2_system", value: 'MINGW32' },
         { name: "msys2_packages", value: 'mingw-w64-i686-pkg-config' },
@@ -328,7 +340,9 @@ end
         ...
       ],
       dkml_host_abi: "windows_x86",
-      dkml_host_os: "windows"
+      dkml_host_os: "windows",
+      opam_root: "${CI_PROJECT_DIR}/.ci/o",
+      opam_root_cacheable: "${CI_PROJECT_DIR}/.ci/o",
   v}
 *)
 let full_matrix_as_list ~filter_dkml_host_abi ~rewrite_name_value =
@@ -339,12 +353,15 @@ let full_matrix_as_list ~filter_dkml_host_abi ~rewrite_name_value =
         Jg_types.Tlist
           (List.filter_map
              (fun (name, value) ->
-               (* capture aggregates *)
-               Aggregate.capture ~name ~value aggregate;
                (* make name value pair unless ~rewrite_name_value is None *)
                match rewrite_name_value ~name ~value () with
-               | None -> None
+               | None ->
+                   (* capture aggregates *)
+                   Aggregate.capture ~name ~value aggregate;
+                   None
                | Some (name', value') ->
+                   (* capture aggregates (after rewriting!) *)
+                   Aggregate.capture ~name:name' ~value:value' aggregate;
                    Some
                      (Jg_types.Tobj
                         [ ("name", Jg_types.Tstr name'); ("value", value') ]))
@@ -363,7 +380,6 @@ let full_matrix_as_list ~filter_dkml_host_abi ~rewrite_name_value =
   {v
     windows_x86: {
       abi_pattern: 'win32-windows_x86',
-      gl_tags: '[shared-windows, windows, windows-1809]',
       gh_unix_shell: 'msys2 {0}',
       msys2_system: 'MINGW32',
       msys2_packages: 'mingw-w64-i686-pkg-config',
@@ -379,6 +395,15 @@ let full_matrix_as_list ~filter_dkml_host_abi ~rewrite_name_value =
 *)
 let vars_as_object ~filter_dkml_host_abi ~rewrite_name_value =
   let matrix = full_matrix_as_list ~filter_dkml_host_abi ~rewrite_name_value in
+  let filter_vars f (vars : Jg_types.tvalue list) : Jg_types.tvalue list =
+    List.filter
+      (function
+        | Jg_types.Tobj
+            [ ("name", Jg_types.Tstr name); ("value", Jg_types.Tstr value) ] ->
+            f ~name ~value
+        | _ -> false)
+      vars
+  in
   let vars =
     List.map
       (function
@@ -387,6 +412,8 @@ let vars_as_object ~filter_dkml_host_abi ~rewrite_name_value =
               ("vars", Jg_types.Tlist vars);
               ("dkml_host_abi", Jg_types.Tstr dkml_host_abi);
               ("dkml_host_os", Jg_types.Tstr dkml_host_os);
+              ("opam_root", Jg_types.Tstr _opam_root);
+              ("opam_root_cacheable", Jg_types.Tstr opam_root_cacheable);
             ] ->
             ( dkml_host_abi,
               Jg_types.Tobj
@@ -394,11 +421,20 @@ let vars_as_object ~filter_dkml_host_abi ~rewrite_name_value =
                   ("name", Jg_types.Tstr "dkml_host_os");
                   ("value", Jg_types.Tstr dkml_host_os);
                 ]
-              :: vars )
+              :: Jg_types.Tobj
+                   [
+                     ("name", Jg_types.Tstr "opam_root_cacheable");
+                     ("value", Jg_types.Tstr opam_root_cacheable);
+                   ]
+              :: filter_vars
+                   (fun ~name ~value:_ ->
+                     not (String.equal name "opam_root_cacheable"))
+                   vars )
         | _ ->
             failwith
-              "Expecting [('vars', Tlist varlist); ...] where vars is the \
-               first item")
+              "Expecting [('vars', Tlist varlist); ('dkml_host_abi', ...); \
+               ('dkml_host_os', ...); ('opam_root', ...); \
+               ('opam_root_cacheable', ...); ...] where vars is the first item")
       matrix
   in
   let f_vars_to_obj = function
@@ -414,45 +450,43 @@ let vars_as_object ~filter_dkml_host_abi ~rewrite_name_value =
         prerr_endline ("FATAL: " ^ msg);
         failwith msg
   in
-  match matrix with
-  | _ ->
-      Jg_types.Tobj
-        (List.map
-           (fun (dkml_host_abi, vars) ->
-             (dkml_host_abi, Jg_types.Tobj (List.map f_vars_to_obj vars)))
-           vars)
+  Jg_types.Tobj
+    (List.map
+       (fun (dkml_host_abi, vars) ->
+         (dkml_host_abi, Jg_types.Tobj (List.map f_vars_to_obj vars)))
+       vars)
+
+let gh_rewrite_name_value ~name ~value () =
+  match
+    ( name,
+      String.is_prefix ~affix:"gl" name || String.is_prefix ~affix:"pc" name )
+  with
+  | _, true -> None
+  | "gh_opam_root", _ -> Some ("opam_root", value)
+  | "gh_opam_root_cacheable", _ -> Some ("opam_root_cacheable", value)
+  | _ -> Some (name, value)
+
+let gl_rewrite_name_value ~name ~value () =
+  match
+    ( name,
+      String.is_prefix ~affix:"gh" name || String.is_prefix ~affix:"pc" name )
+  with
+  | _, true -> None
+  | "gl_opam_root", _ -> Some ("opam_root", value)
+  | "gl_opam_root_cacheable", _ -> Some ("opam_root_cacheable", value)
+  | _ -> Some (name, value)
+
+let pc_rewrite_name_value ~name ~value () =
+  match
+    ( name,
+      String.is_prefix ~affix:"gh" name || String.is_prefix ~affix:"gl" name )
+  with
+  | _, true -> None
+  | "pc_opam_root", _ -> Some ("opam_root", value)
+  | "pc_opam_root_cacheable", _ -> Some ("opam_root_cacheable", value)
+  | _ -> Some (name, value)
 
 let model ~filter_dkml_host_abi ~read_script =
-  let gh_rewrite_name_value ~name ~value () =
-    match
-      ( name,
-        String.is_prefix ~affix:"gl" name || String.is_prefix ~affix:"pc" name
-      )
-    with
-    | _, true -> None
-    | "gh_opam_root", _ -> Some ("opam_root", value)
-    | _ -> Some (name, value)
-  in
-  let gl_rewrite_name_value ~name ~value () =
-    match
-      ( name,
-        String.is_prefix ~affix:"gh" name || String.is_prefix ~affix:"pc" name
-      )
-    with
-    | _, true -> None
-    | "gl_opam_root", _ -> Some ("opam_root", value)
-    | _ -> Some (name, value)
-  in
-  let pc_rewrite_name_value ~name ~value () =
-    match
-      ( name,
-        String.is_prefix ~affix:"gh" name || String.is_prefix ~affix:"gl" name
-      )
-    with
-    | _, true -> None
-    | "pc_opam_root", _ -> Some ("opam_root", value)
-    | _ -> Some (name, value)
-  in
   [
     ( "global_env_vars",
       Jg_types.Tlist
@@ -486,5 +520,6 @@ let model ~filter_dkml_host_abi ~read_script =
   ]
   @ Scripts.to_vars read_script
   @ Typography.vars
+  @ Caching.static_vars
   @ Caching.gh_cachekeys read_script
   @ Caching.gl_cachekeys read_script

@@ -9,7 +9,7 @@ let env = { Jg_types.std_env with autoescape = false }
 let () =
   (* Parse args *)
   let filter_dkml_host_abi, output_file =
-    Workflow_arg.Arg_common.parse "gl-setup-dkml-yml.exe"
+    Workflow_arg.Arg_common.parse "gl-setup-dkml-yml"
   in
   (* Generate *)
   let models =

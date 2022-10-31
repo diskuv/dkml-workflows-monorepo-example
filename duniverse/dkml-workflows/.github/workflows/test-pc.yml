@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  setup:
+  setup-windows:
     strategy:
       fail-fast: true
       matrix:
@@ -28,3 +28,35 @@ jobs:
 
       - name: Run test/pc/setup-dkml-${{ matrix.dkml_host_abi }}.ps1
         run: test/pc/setup-dkml-${{ matrix.dkml_host_abi }}.ps1
+
+  setup-linux:
+    strategy:
+      fail-fast: true
+      matrix:
+        dkml_host_abi:
+          - linux_x86_64
+    runs-on: ubuntu-latest
+    name: build / ${{ matrix.dkml_host_abi }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run test/pc/setup-dkml-${{ matrix.dkml_host_abi }}.sh
+        run: sh test/pc/setup-dkml-${{ matrix.dkml_host_abi }}.sh
+
+  setup-macos:
+    strategy:
+      fail-fast: true
+      matrix:
+        dkml_host_abi:
+          - darwin_x86_64
+    runs-on: macos-latest
+    name: build / ${{ matrix.dkml_host_abi }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run test/pc/setup-dkml-${{ matrix.dkml_host_abi }}.sh
+        run: sh test/pc/setup-dkml-${{ matrix.dkml_host_abi }}.sh

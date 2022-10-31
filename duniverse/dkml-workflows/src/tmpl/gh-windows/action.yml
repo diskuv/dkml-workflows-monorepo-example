@@ -47,7 +47,11 @@ inputs:
   VERBOSE:
     description: "Turn on verbose logging"
     required: false
-    default: 'true'
+    default: 'false'
+  SECONDARY_SWITCH:
+    description: "Turn on secondary 'two' switch"
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -63,7 +67,7 @@ runs:
       run: |
         # Select correct Windows matrix variables
         case "{% raw -%}${{ matrix.dkml_host_abi }}{%- endraw %}" in
-        {% for outer in gh_matrix %}{%- if outer.dkml_host_os == "windows" -%}{{ nl }}        {{ outer.dkml_host_abi }}){{ nl }}          {% for var in outer.vars %}{{ var.name }}={{ squot }}{{ var.value }}{{ squot }} {%- if loop.last %} ;; {%- else -%} ; {%- endif %}{{ nl }}          {% endfor %}{%- endif %}{% endfor %}
+        {% for (abi,abi_vars) in gh_vars %}{%- if abi_vars.dkml_host_os == "windows" -%}{{ nl }}        {{ abi }}){{ nl }}          {% for (name,value) in abi_vars %}{{ name }}={{ squot }}{{ value }}{{ squot }} {%- if loop.last %} ;; {%- else -%} ; {%- endif %}{{ nl }}          {% endfor %}{%- endif %}{% endfor %}
         *)  echo "FATAL: Unsupported dkml_host_abi=$dkml_host_abi in Windows action.yml"; exit 107 ;;
         esac
 
@@ -74,6 +78,7 @@ runs:
         add dkml_host_abi "$dkml_host_abi"
         add abi_pattern "$abi_pattern"
         add opam_root "$opam_root"
+        add opam_root_cacheable "$opam_root_cacheable"
         add exe_ext "${exe_ext:-}"
         add bootstrap_opam_version "${bootstrap_opam_version:-}"
         add ocaml_options "${ocaml_options:-}"
@@ -169,21 +174,22 @@ runs:
       with:
         path: .ci/sd4/bs
         key:
-          "{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-bs-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}{%- endraw %}"
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-bs-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}{%- endraw %}"
 
     - name: Cache Opam root by (host,target)
       uses: actions/cache@v3
       id: cache-sd4-opamroot
       with:
         path: |
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root }}{%- endraw %}/config
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root }}{%- endraw %}/dkml
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root }}{%- endraw %}/repo
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root }}{%- endraw %}/download-cache
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root }}{%- endraw %}/.ci.root-init
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root }}{%- endraw %}/.ci.repo-init
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/config
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/dkml
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/two
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/repo
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/download-cache
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.root-init
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.repo-init
         key:
-          c2_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}{%- endraw %}
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}{%- endraw %}"
 
     # The action/checkout steps used for pinning will re-use existing Git objects
     # because of caching
@@ -193,7 +199,7 @@ runs:
       with:
         path: .ci/sd4/g
         key:
-          "{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-git-${{ hashFiles('.ci/sd4/cachekey.ci.inputs') }}{%- endraw %}"
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-git-${{ hashFiles('.ci/sd4/cachekey.ci.inputs') }}{%- endraw %}"
 
     # Checkout code
 
@@ -211,7 +217,7 @@ runs:
       id: cache-sd4-vsenv
       with:
         path: .ci/sd4/vsenv.github
-        key: "{% raw -%}${{ inputs.CACHE_PREFIX }}_sd4-vsenv-${{ hashFiles('cachekey.vsstudio') }}{%- endraw %}"
+        key: "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_sd4-vsenv-${{ hashFiles('cachekey.vsstudio') }}{%- endraw %}"
 
     - name: Configure Visual Studio (Windows)
       shell: pwsh
@@ -250,6 +256,7 @@ runs:
         DISKUV_OPAM_REPOSITORY:           "{% raw -%}${{ inputs.DISKUV_OPAM_REPOSITORY }}{%- endraw %}"
         DKML_COMPILER:                    "{% raw -%}${{ inputs.DKML_COMPILER }}{%- endraw %}"
         OCAML_COMPILER:                   "{% raw -%}${{ inputs.OCAML_COMPILER }}{%- endraw %}"
+        SECONDARY_SWITCH:                 "{% raw -%}${{ inputs.SECONDARY_SWITCH }}{%- endraw %}"
         VERBOSE:                          "{% raw -%}${{ inputs.VERBOSE }}{%- endraw %}"
 
         # autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}        {{ var.name }}: {{ squot }}{{ var.value }}{{ squot }}{% endfor %}

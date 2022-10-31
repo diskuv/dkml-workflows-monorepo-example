@@ -3,9 +3,18 @@
 include:
   - local: 'test/gl/setup-dkml.gitlab-ci.yml'
 
+test-gl-linux:
+  extends: .linux:setup-dkml
+
+test-gl-win32:
+  extends: .win32:setup-dkml
+
+test-gl-macos:
+  extends: .macos:setup-dkml
+
 # Test personal computer (PC) scripts
 
-test-pc:
+test-pc-windows:
   stage: build # no point waiting for the build phase of `local: 'test/gl/setup-dkml.gitlab-ci.yml'`
   parallel:
     matrix:
@@ -19,3 +28,13 @@ test-pc:
 
   script:
     - '& test\pc\setup-dkml-${env:dkml_host_abi}.ps1'
+
+test-pc-linux:
+  stage: build # no point waiting for the build phase of `local: 'test/gl/setup-dkml.gitlab-ci.yml'`
+  parallel:
+    matrix:
+      - dkml_host_abi: linux_x86
+      - dkml_host_abi: linux_x86_64
+
+  script:
+    - sh test/pc/setup-dkml-${dkml_host_abi}.sh

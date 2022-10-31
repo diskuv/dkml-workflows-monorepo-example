@@ -1,3 +1,5 @@
+; windows_x86
+
 (rule
  (target setup-dkml-windows_x86-gen.ps1)
  (action
@@ -10,3 +12,63 @@
  (alias runtest)
  (action
   (diff setup-dkml-windows_x86.ps1 setup-dkml-windows_x86-gen.ps1)))
+
+; windows_x86_64
+
+(rule
+ (target setup-dkml-windows_x86_64-gen.ps1)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run ../../src/pc_setup_dkml.exe --output-windows_x86_64 %{target}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff setup-dkml-windows_x86_64.ps1 setup-dkml-windows_x86_64-gen.ps1)))
+
+; darwin_x86_64
+
+(rule
+ (target setup-dkml-darwin_x86_64-gen.sh)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run ../../src/pc_setup_dkml.exe --output-darwin_x86_64 %{target}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff setup-dkml-darwin_x86_64.sh setup-dkml-darwin_x86_64-gen.sh)))
+
+; linux_x86
+
+(rule
+ (target setup-dkml-linux_x86-gen.sh)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run ../../src/pc_setup_dkml.exe --output-linux_x86 %{target}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff setup-dkml-linux_x86.sh setup-dkml-linux_x86-gen.sh)))
+
+; linux_x86_64
+
+(rule
+ (target setup-dkml-linux_x86_64-gen.sh)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run ../../src/pc_setup_dkml.exe --output-linux_x86_64 %{target}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff setup-dkml-linux_x86_64.sh setup-dkml-linux_x86_64-gen.sh)))

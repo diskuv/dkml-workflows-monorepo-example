@@ -29,7 +29,7 @@ let scaffold_gh ~output_dir () =
   (setenv
   OCAMLRUNPARAM
   b
-  (run %%{bin:gh-setup-dkml-action-yml.exe} --output-%s %%{target}))))
+  (run gh-setup-dkml-action-yml --output-%s %%{target}))))
 
 (rule
 (alias gen-dkml)
@@ -61,7 +61,7 @@ let scaffold_gl ~output_dir () =
   OCAMLRUNPARAM
   b
   (run
-    %%{bin:gl-setup-dkml-yml.exe}
+    gl-setup-dkml-yml
     ; Exclude macOS until you have a https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/issues approved
     --exclude-macos
     --output-file
@@ -99,13 +99,22 @@ let scaffold_pc ~output_dir () =
   let dune_content =
     Printf.sprintf
       {|
+; windows_x86
+
 (rule
 (target setup-dkml-windows_x86-gen.ps1)
 (action
   (setenv
   OCAMLRUNPARAM
   b
-  (run %%{bin:pc-setup-dkml.exe} --output-windows_x86 %%{target}))))
+  (run pc-setup-dkml --output-windows_x86 %%{target}))))
+
+(rule
+(alias gen-dkml)
+(action
+  (diff setup-dkml-windows_x86.ps1 setup-dkml-windows_x86-gen.ps1)))
+
+; windows_x86_64
 
 (rule
 (target setup-dkml-windows_x86_64-gen.ps1)
@@ -113,17 +122,27 @@ let scaffold_pc ~output_dir () =
   (setenv
   OCAMLRUNPARAM
   b
-  (run %%{bin:pc-setup-dkml.exe} --output-windows_x86_64 %%{target}))))
-
-(rule
-(alias gen-dkml)
-(action
-  (diff setup-dkml-windows_x86.ps1 setup-dkml-windows_x86-gen.ps1)))
+  (run pc-setup-dkml --output-windows_x86_64 %%{target}))))
 
 (rule
 (alias gen-dkml)
 (action
   (diff setup-dkml-windows_x86_64.ps1 setup-dkml-windows_x86_64-gen.ps1)))
+
+; darwin_x86_64
+
+(rule
+ (target setup-dkml-darwin_x86_64-gen.sh)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run pc-setup-dkml --output-darwin_x86_64 %%{target}))))
+
+(rule
+ (alias gen-dkml)
+ (action
+  (diff setup-dkml-darwin_x86_64.sh setup-dkml-darwin_x86_64-gen.sh)))
   |}
   in
   let* (_exists : bool) = OS.Dir.create pc_dir in
@@ -141,7 +160,7 @@ let scaffold ~output_dir () =
 
 let () =
   (* Parse args *)
-  let exe_name = "generate-setup-dkml-scaffold.exe" in
+  let exe_name = "generate-setup-dkml-scaffold" in
   let usage = Printf.sprintf "%s --output-file OUTPUT_FILE" exe_name in
   let anon _s = failwith "No command line arguments are supported" in
   let output_dir = ref "ci/setup-dkml" in

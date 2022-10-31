@@ -1,6 +1,323 @@
 #!/bin/sh
 set -euf
 
+# Reset environment so no conflicts with a parent Opam or OCaml system
+unset OPAMROOT
+unset OPAM_SWITCH_PREFIX
+unset OPAMSWITCH
+unset CAML_LD_LIBRARY_PATH
+unset OCAMLLIB
+unset OCAML_TOPLEVEL_PATH
+
+export PC_PROJECT_DIR="$PWD"
+export FDOPEN_OPAMEXE_BOOTSTRAP=false
+export CACHE_PREFIX=v1
+export OCAML_COMPILER=
+export DKML_COMPILER=
+export CONF_DKML_CROSS_TOOLCHAIN=@repository@
+export DISKUV_OPAM_REPOSITORY=
+export SECONDARY_SWITCH=false
+# autogen from global_env_vars.
+export DEFAULT_DKML_COMPILER='4.12.1-v1.0.2'
+export PIN_BASE='v0.14.3'
+export PIN_BIGSTRINGAF='0.8.0'
+export PIN_CORE_KERNEL='v0.14.2'
+export PIN_CTYPES_FOREIGN='0.19.2-windowssupport-r4'
+export PIN_CTYPES='0.19.2-windowssupport-r4'
+export PIN_CURLY='0.2.1-windows-env_r2'
+export PIN_DIGESTIF='1.0.1'
+export PIN_DUNE='2.9.3'
+export PIN_OCAMLBUILD='0.14.0'
+export PIN_OCAMLFIND='1.9.1'
+export PIN_OCP_INDENT='1.8.2-windowssupport'
+export PIN_PPX_EXPECT='v0.14.1'
+export PIN_PTIME='0.8.6-msvcsupport'
+export PIN_TIME_NOW='v0.14.0'
+
+usage() {
+  echo 'Setup Diskuv OCaml (DKML) compiler on a desktop PC.' >&2
+  echo 'usage: setup-dkml-linux_x86.sh [options]' >&2
+  echo 'Options:' >&2
+
+  # Context variables
+  echo "  --PC_PROJECT_DIR=<value>. Defaults to the current directory (${PC_PROJECT_DIR})" >&2
+
+  # Input variables
+  echo "  --FDOPEN_OPAMEXE_BOOTSTRAP=true|false. Defaults to: ${FDOPEN_OPAMEXE_BOOTSTRAP}" >&2
+  echo "  --CACHE_PREFIX=<value>. Defaults to: ${CACHE_PREFIX}" >&2
+  echo "  --OCAML_COMPILER=<value>. --DKML_COMPILER takes priority. If --DKML_COMPILER is not set and --OCAML_COMPILER is set, then the specified OCaml version tag of dkml-compiler (ex. 4.12.1) is used. Defaults to: ${OCAML_COMPILER}" >&2
+  echo "  --DKML_COMPILER=<value>. Unspecified or blank is the latest from the default branch (main) of dkml-compiler. Defaults to: ${DKML_COMPILER}" >&2
+  echo "  --SECONDARY_SWITCH=true|false. If true then the secondary switch named 'two' is created, in addition to the always-present 'dkml' switch. Defaults to: ${SECONDARY_SWITCH}" >&2
+  echo "  --CONF_DKML_CROSS_TOOLCHAIN=<value>. Unspecified or blank is the latest from the default branch (main) of conf-dkml-cross-toolchain. @repository@ is the latest from Opam. Defaults to: ${CONF_DKML_CROSS_TOOLCHAIN}" >&2
+  echo "  --DISKUV_OPAM_REPOSITORY=<value>. Defaults to the value of --DEFAULT_DISKUV_OPAM_REPOSITORY_TAG (see below)" >&2
+
+  # autogen from global_env_vars.
+  echo "  --DEFAULT_DKML_COMPILER=<value>. Defaults to: ${DEFAULT_DKML_COMPILER}" >&2
+  echo "  --PIN_BASE=<value>. Defaults to: ${PIN_BASE}" >&2
+  echo "  --PIN_BIGSTRINGAF=<value>. Defaults to: ${PIN_BIGSTRINGAF}" >&2
+  echo "  --PIN_CORE_KERNEL=<value>. Defaults to: ${PIN_CORE_KERNEL}" >&2
+  echo "  --PIN_CTYPES_FOREIGN=<value>. Defaults to: ${PIN_CTYPES_FOREIGN}" >&2
+  echo "  --PIN_CTYPES=<value>. Defaults to: ${PIN_CTYPES}" >&2
+  echo "  --PIN_CURLY=<value>. Defaults to: ${PIN_CURLY}" >&2
+  echo "  --PIN_DIGESTIF=<value>. Defaults to: ${PIN_DIGESTIF}" >&2
+  echo "  --PIN_DUNE=<value>. Defaults to: ${PIN_DUNE}" >&2
+  echo "  --PIN_OCAMLBUILD=<value>. Defaults to: ${PIN_OCAMLBUILD}" >&2
+  echo "  --PIN_OCAMLFIND=<value>. Defaults to: ${PIN_OCAMLFIND}" >&2
+  echo "  --PIN_OCP_INDENT=<value>. Defaults to: ${PIN_OCP_INDENT}" >&2
+  echo "  --PIN_PPX_EXPECT=<value>. Defaults to: ${PIN_PPX_EXPECT}" >&2
+  echo "  --PIN_PTIME=<value>. Defaults to: ${PIN_PTIME}" >&2
+  echo "  --PIN_TIME_NOW=<value>. Defaults to: ${PIN_TIME_NOW}" >&2
+  exit 2
+}
+fail() {
+  echo "Error: $*" >&2
+  exit 3
+}
+unset file
+
+OPTIND=1
+while getopts :h-: option; do
+  case $option in
+  h) usage ;;
+  -) case $OPTARG in
+    PC_PROJECT_DIR) fail "Option \"$OPTARG\" missing argument" ;;
+    PC_PROJECT_DIR=*) PC_PROJECT_DIR=${OPTARG#*=} ;;
+    CACHE_PREFIX) fail "Option \"$OPTARG\" missing argument" ;;
+    CACHE_PREFIX=*) CACHE_PREFIX=${OPTARG#*=} ;;
+    FDOPEN_OPAMEXE_BOOTSTRAP) fail "Option \"$OPTARG\" missing argument" ;;
+    FDOPEN_OPAMEXE_BOOTSTRAP=*) FDOPEN_OPAMEXE_BOOTSTRAP=${OPTARG#*=} ;;
+    OCAML_COMPILER) fail "Option \"$OPTARG\" missing argument" ;;
+    OCAML_COMPILER=*) OCAML_COMPILER=${OPTARG#*=} ;;
+    DKML_COMPILER) fail "Option \"$OPTARG\" missing argument" ;;
+    DKML_COMPILER=*) DKML_COMPILER=${OPTARG#*=} ;;
+    SECONDARY_SWITCH) fail "Option \"$OPTARG\" missing argument" ;;
+    SECONDARY_SWITCH=*) SECONDARY_SWITCH=${OPTARG#*=} ;;
+    CONF_DKML_CROSS_TOOLCHAIN) fail "Option \"$OPTARG\" missing argument" ;;
+    CONF_DKML_CROSS_TOOLCHAIN=*) CONF_DKML_CROSS_TOOLCHAIN=${OPTARG#*=} ;;
+    DISKUV_OPAM_REPOSITORY) fail "Option \"$OPTARG\" missing argument" ;;
+    DISKUV_OPAM_REPOSITORY=*) DISKUV_OPAM_REPOSITORY=${OPTARG#*=} ;;
+    # autogen from global_env_vars.
+    DEFAULT_DKML_COMPILER) fail "Option \"$OPTARG\" missing argument" ;;
+    DEFAULT_DKML_COMPILER=*) DEFAULT_DKML_COMPILER=${OPTARG#*=} ;;
+    PIN_BASE) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_BASE=*) PIN_BASE=${OPTARG#*=} ;;
+    PIN_BIGSTRINGAF) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_BIGSTRINGAF=*) PIN_BIGSTRINGAF=${OPTARG#*=} ;;
+    PIN_CORE_KERNEL) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_CORE_KERNEL=*) PIN_CORE_KERNEL=${OPTARG#*=} ;;
+    PIN_CTYPES_FOREIGN) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_CTYPES_FOREIGN=*) PIN_CTYPES_FOREIGN=${OPTARG#*=} ;;
+    PIN_CTYPES) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_CTYPES=*) PIN_CTYPES=${OPTARG#*=} ;;
+    PIN_CURLY) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_CURLY=*) PIN_CURLY=${OPTARG#*=} ;;
+    PIN_DIGESTIF) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_DIGESTIF=*) PIN_DIGESTIF=${OPTARG#*=} ;;
+    PIN_DUNE) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_DUNE=*) PIN_DUNE=${OPTARG#*=} ;;
+    PIN_OCAMLBUILD) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_OCAMLBUILD=*) PIN_OCAMLBUILD=${OPTARG#*=} ;;
+    PIN_OCAMLFIND) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_OCAMLFIND=*) PIN_OCAMLFIND=${OPTARG#*=} ;;
+    PIN_OCP_INDENT) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_OCP_INDENT=*) PIN_OCP_INDENT=${OPTARG#*=} ;;
+    PIN_PPX_EXPECT) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_PPX_EXPECT=*) PIN_PPX_EXPECT=${OPTARG#*=} ;;
+    PIN_PTIME) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_PTIME=*) PIN_PTIME=${OPTARG#*=} ;;
+    PIN_TIME_NOW) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_TIME_NOW=*) PIN_TIME_NOW=${OPTARG#*=} ;;
+    help) usage ;;
+    help=*) fail "Option \"${OPTARG%%=*}\" has unexpected argument" ;;
+    *) fail "Unknown long option \"${OPTARG%%=*}\"" ;;
+    esac ;;
+  '?') fail "Unknown short option \"$OPTARG\"" ;;
+  :) fail "Short option \"$OPTARG\" missing argument" ;;
+  *) fail "Bad state in getopts (OPTARG=\"$OPTARG\")" ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+# Set matrix variables
+# autogen from pc_vars. only linux_x86
+export dkml_host_os="linux"
+export opam_root_cacheable=".ci/o"
+export abi_pattern="manylinux2014-linux_x86"
+export comment="(CentOS 7, etc.)"
+export bootstrap_opam_version="2.2.0-dkml20220801T155940Z"
+export dkml_host_abi="linux_x86"
+export opam_root=".ci/o"
+export in_docker="true"
+export dockcross_image="dockcross/manylinux2014-x86"
+export dockcross_run_extra_args="--platform linux/386"
+
+
+########################### before_script ###############################
+
+echo "Writing scripts ..."
+install -d .ci/sd4
+
+cat > .ci/sd4/common-values.sh <<'end_of_script'
+#!/bin/sh
+
+# ------------------------ Log Formatting ------------------------
+
+TXT_SECTION="\e[94m" # bright blue
+TXT_CLEAR="\e[0m"
+
+if [ "${GITLAB_CI:-}" = "true" ]; then
+    # https://docs.gitlab.com/ee/ci/jobs/#expand-and-collapse-job-log-sections
+    print_section_start() {
+        print_section_start_NAME=$1
+        shift
+        printf "\e[0Ksection_start:%s:%s[collapsed=true]\r\e[0K" \
+            "$(date +%s)" \
+            "$print_section_start_NAME"
+    }
+    print_section_end() {
+        print_section_end_NAME=$1
+        shift
+        printf "\e[0Ksection_end:%s:%s\r\e[0K\n" \
+            "$(date +%s)" \
+            "$print_section_end_NAME"
+    }
+else
+    print_section_start() {
+        print_section_start_NAME=$1
+        shift
+    }
+    print_section_end() {
+        print_section_end_NAME=$1
+        shift
+    }
+fi
+
+section_begin() {
+    # https://docs.gitlab.com/ee/ci/yaml/script.html#add-color-codes-to-script-output
+    section_NAME=$1
+    shift
+    section_HEADER=$1
+    shift
+    print_section_start "$section_NAME"
+    printf "${TXT_SECTION}%s${TXT_CLEAR}\n" "$section_HEADER"
+}
+
+section_end() {
+    section_NAME=$1
+    shift
+    print_section_end "$section_NAME"
+}
+
+end_of_script
+
+cat > .ci/sd4/run-checkout-code.sh <<'end_of_script'
+#!/bin/sh
+
+# ================
+# checkout-code.sh
+# ================
+#
+# Checkouts all of the git source code.
+#
+# This should be done outside of
+# dockcross (used by Linux) since a Docker-in-Docker container can have
+# difficulties doing a git checkout (the Git credentials for any private
+# repositories are likely not present). We don't care about any private
+# repositories for DKML but any code that extends this (ex. DKSDK) may
+# need to use private repositories.
+
+set -euf
+
+setup_WORKSPACE_VARNAME=$1
+shift
+setup_WORKSPACE=$1
+shift
+
+# ------------------------ Functions ------------------------
+
+# shellcheck source=./common-values.sh
+. .ci/sd4/common-values.sh
+
+# Disable automatic garbage collection
+git_disable_gc() {
+    git_disable_gc_NAME=$1
+    shift
+    git -C ".ci/sd4/g/$git_disable_gc_NAME" config --local gc.auto 0
+}
+
+# Mimic the behavior of GitHub's actions/checkout@v3
+# - the plus symbol in 'git fetch ... origin +REF:refs/tags/v0.0' overrides any existing REF
+git_checkout() {
+    git_checkout_NAME=$1
+    shift
+    git_checkout_URL=$1
+    shift
+    git_checkout_REF=$1
+    shift
+
+    if [ -e ".ci/sd4/g/$git_checkout_NAME" ]; then
+        git_disable_gc "$git_checkout_NAME"
+        git -C ".ci/sd4/g/$git_checkout_NAME" remote set-url origin "$git_checkout_URL"
+        git -C ".ci/sd4/g/$git_checkout_NAME" fetch --no-tags --progress --no-recurse-submodules --depth=1 origin "+${git_checkout_REF}:refs/tags/v0.0"
+    else
+        install -d ".ci/sd4/g/$git_checkout_NAME"
+        git -C ".ci/sd4/g/$git_checkout_NAME" -c init.defaultBranch=main init
+        git_disable_gc "$git_checkout_NAME"
+        git -C ".ci/sd4/g/$git_checkout_NAME" remote add origin "$git_checkout_URL"
+        git -C ".ci/sd4/g/$git_checkout_NAME" fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin "+${git_checkout_REF}:refs/tags/v0.0"
+    fi
+    git -C ".ci/sd4/g/$git_checkout_NAME" -c advice.detachedHead=false checkout --progress --force refs/tags/v0.0
+    git -C ".ci/sd4/g/$git_checkout_NAME" log -1 --format='%H'
+}
+
+# ---------------------------------------------------------------------
+
+section_begin checkout-info "Summary: code checkout"
+
+# shellcheck disable=SC2154
+echo "
+================
+checkout-code.sh
+================
+.
+---------
+Arguments
+---------
+WORKSPACE_VARNAME=$setup_WORKSPACE_VARNAME
+WORKSPACE=$setup_WORKSPACE
+.
+------
+Inputs
+------
+VERBOSE=${VERBOSE:-}
+.
+------
+Matrix
+------
+dkml_host_abi=$dkml_host_abi
+.
+"
+
+section_end checkout-info
+
+install -d .ci/sd4/g
+
+# dkml-runtime-distribution
+
+case "$dkml_host_abi" in
+windows_*)
+    section_begin checkout-dkml-runtime-distribution 'Checkout dkml-runtime-distribution'
+    git_checkout dkml-runtime-distribution https://github.com/diskuv/dkml-runtime-distribution.git "1a3ec82dd851751a95e6a4797387a8163c51520e"
+    section_end checkout-dkml-runtime-distribution
+    ;;
+esac
+
+end_of_script
+
+cat > .ci/sd4/run-setup-dkml.sh <<'end_of_script'
+#!/bin/sh
+set -euf
+
 # Constants
 SHA512_DEVNULL='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
 #   Edited by https://gitlab.com/diskuv/diskuv-ocaml/contributors/release.sh
@@ -1029,3 +1346,26 @@ do_summary dkml
 if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
     do_summary two
 fi
+
+end_of_script
+
+sh .ci/sd4/run-checkout-code.sh PC_PROJECT_DIR "${PC_PROJECT_DIR}"
+sh .ci/sd4/run-setup-dkml.sh PC_PROJECT_DIR "${PC_PROJECT_DIR}"
+
+# shellcheck disable=SC2154
+echo "
+Finished setup.
+
+To continue your testing, run:
+  export dkml_host_abi='${dkml_host_abi}'
+  export abi_pattern='${abi_pattern}'
+  export opam_root='${opam_root}'
+  export exe_ext='${exe_ext:-}'
+  export PC_PROJECT_DIR='$PWD'
+  export PATH=\"$PC_PROJECT_DIR/.ci/sd4/opamrun:\$PATH\"
+
+Now you can use 'opamrun' to do opam commands like:
+
+  opamrun install XYZ.opam
+  opamrun exec -- sh ci/build-test.sh
+"

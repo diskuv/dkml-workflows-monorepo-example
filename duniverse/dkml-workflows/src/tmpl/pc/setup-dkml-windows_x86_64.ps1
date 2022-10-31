@@ -1,13 +1,48 @@
 # setup-dkml
 #   Short form: sd4
   
+<#
+.SYNOPSIS
+
+Setup Diskuv OCaml (DKML) compiler on a desktop PC.
+
+.DESCRIPTION
+
+Setup Diskuv OCaml (DKML) compiler on a desktop PC.
+
+.PARAMETER PC_PROJECT_DIR
+Context variable for the project directory. Defaults to the current directory.
+
+.PARAMETER FDOPEN_OPAMEXE_BOOTSTRAP
+Input variable.
+
+.PARAMETER CACHE_PREFIX
+Input variable.
+
+.PARAMETER OCAML_COMPILER
+Input variable. -DKML_COMPILER takes priority. If -DKML_COMPILER is not set and -OCAML_COMPILER is set, then the specified OCaml version tag of dkml-compiler (ex. 4.12.1) is used.
+
+.PARAMETER DKML_COMPILER
+Input variable. Unspecified or blank is the latest from the default branch (main) of dkml-compiler. @repository@ is the latest from Opam.
+
+.PARAMETER SECONDARY_SWITCH
+Input variable. If true then the secondary switch named 'two' is created, in addition to the always-present 'dkml' switch. 
+
+.PARAMETER CONF_DKML_CROSS_TOOLCHAIN
+Input variable. Unspecified or blank is the latest from the default branch (main) of conf-dkml-cross-toolchain. @repository@ is the latest from Opam.
+
+.PARAMETER DISKUV_OPAM_REPOSITORY
+Input variable. Defaults to the value of -DEFAULT_DISKUV_OPAM_REPOSITORY_TAG (see below)
+
+# autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}.PARAMETER {{ var.name }}{{ nl }}Environment variable.{{ nl }}{% endfor %}
+#>
 [CmdletBinding()]
 param (
   # Context variables
-  [Parameter()]
+  [Parameter(HelpMessage='Defaults to the current directory')]
   [string]
   $PC_PROJECT_DIR = $PWD,
-
+  
   # Input variables
   [Parameter()]
   [string]
@@ -20,13 +55,16 @@ param (
   $OCAML_COMPILER = "",
   [Parameter()]
   [string]
-  $DKML_COMPILER = "", # "@repository@" = Opam ; "" = latest from default branch ("main") of git clone
+  $DKML_COMPILER = "",
   [Parameter()]
   [string]
-  $CONF_DKML_CROSS_TOOLCHAIN = "@repository@", # "@repository@" = Opam ; "" = latest from default branch of git clone
+  $SECONDARY_SWITCH = "false",
   [Parameter()]
   [string]
-  $DISKUV_OPAM_REPOSITORY = "" # DEFAULT_DISKUV_OPAM_REPOSITORY_TAG is used as default for empty strings
+  $CONF_DKML_CROSS_TOOLCHAIN = "@repository@",
+  [Parameter()]
+  [string]
+  $DISKUV_OPAM_REPOSITORY = ""
 
   # Conflicts with automatic variable $Verbose
   # [Parameter()]
@@ -34,10 +72,18 @@ param (
   # $VERBOSE = "false"
     
   # Environment variables (can be overridden on command line)
-  # autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}    ,[Parameter()] [string] ${{ var.name }} = "{{ var.value }}"{% endfor %}
+  # autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}  ,[Parameter()] [string] ${{ var.name }} = "{{ var.value }}"{% endfor %}
 )
 
 $ErrorActionPreference = "Stop"
+
+# Reset environment so no conflicts with a parent Opam or OCaml system
+if (Test-Path Env:OPAMROOT)             { Remove-Item Env:OPAMROOT }
+if (Test-Path Env:OPAMSWITCH)           { Remove-Item Env:OPAMSWITCH }
+if (Test-Path Env:OPAM_SWITCH_PREFIX)   { Remove-Item Env:OPAM_SWITCH_PREFIX }
+if (Test-Path Env:CAML_LD_LIBRARY_PATH) { Remove-Item Env:CAML_LD_LIBRARY_PATH }
+if (Test-Path Env:OCAMLLIB)             { Remove-Item Env:OCAMLLIB }
+if (Test-Path Env:OCAML_TOPLEVEL_PATH)  { Remove-Item Env:OCAML_TOPLEVEL_PATH }
 
 # Pushdown context variables
 $env:PC_CI = 'true'
@@ -48,11 +94,12 @@ $env:FDOPEN_OPAMEXE_BOOTSTRAP = $FDOPEN_OPAMEXE_BOOTSTRAP
 $env:CACHE_PREFIX = $CACHE_PREFIX
 $env:OCAML_COMPILER = $OCAML_COMPILER
 $env:DKML_COMPILER = $DKML_COMPILER
+$env:SECONDARY_SWITCH = $SECONDARY_SWITCH
 $env:CONF_DKML_CROSS_TOOLCHAIN = $CONF_DKML_CROSS_TOOLCHAIN
 $env:DISKUV_OPAM_REPOSITORY = $DISKUV_OPAM_REPOSITORY
 
 # Set matrix variables
-# autogen from pc_matrix. only windows_x86_64{% for outer in pc_matrix %}{%- if outer.dkml_host_abi == "windows_x86_64" -%}{{ nl }}{% for var in outer.vars %}$env:{{ var.name }} = "{{ var.value }}"{{ nl }}{% endfor %}{%- endif %}{% endfor %}
+# autogen from pc_vars. only windows_x86_64{{ nl }}{% for (name,value) in pc_vars.windows_x86_64 %}$env:{{ name }} = "{{ value }}"{{ nl }}{% endfor %}
 
 # Set environment variables
 # autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}$env:{{ var.name }} = ${{ var.name }}{% endfor %}
@@ -93,7 +140,7 @@ else {
 Write-Host "Update MSYS2 ..."
 msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu' # Core update (in case any core packages are outdated)
 msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu' # Normal update
-taskkill /F /FI "MODULES eq msys-2.0.dll"
+if ("${env:CI}" -eq "true") { taskkill /F /FI "MODULES eq msys-2.0.dll" } # Only safe to kill MSYS2 in CI
 
 Write-Host "Install matrix, required and CI packages ..."
 #   Packages for GitLab CI:
@@ -164,6 +211,9 @@ msys64\usr\bin\bash -lc "set | grep -v '^PATH=' | awk -f .ci/sd4/msvcenv.awk > .
 Set-Content -Path ".ci\sd4\get-msvcpath-into-msys2.cmd" -Encoding Default -Value $Content
 
 msys64\usr\bin\bash -lc "sh .ci/sd4/run-checkout-code.sh PC_PROJECT_DIR '${env:PC_PROJECT_DIR}'"
+if ($LASTEXITCODE -ne 0) {
+  throw "run-checkout-code.sh failed"
+}
 
 # Diagnose Visual Studio environment variables (Windows)
 # This wastes time and has lots of rows! Only run if "VERBOSE" GitHub input key.
@@ -187,11 +237,14 @@ msys64\usr\bin\bash -lc "dos2unix .ci/sd4/vsenv.sh"
 Get-Content .ci/sd4/vsenv.sh
 
 # Capture Visual Studio compiler environment
-msys64\usr\bin\bash -lc ". .ci/sd4/vsenv.sh && cmd /c .ci/sd4/get-msvcpath-into-msys2.cmd"
+msys64\usr\bin\bash -lc ". .ci/sd4/vsenv.sh && cmd /c '.ci\sd4\get-msvcpath-into-msys2.cmd'"
 msys64\usr\bin\bash -lc "cat .ci/sd4/msvcpath | tr -d '\r' | cygpath --path -f - | awk -f .ci/sd4/msvcpath.awk >> .ci/sd4/msvcenv"    
 msys64\usr\bin\bash -lc "tail -n100 .ci/sd4/msvcpath .ci/sd4/msvcenv"
 
 msys64\usr\bin\bash -lc "sh .ci/sd4/run-setup-dkml.sh PC_PROJECT_DIR '${env:PC_PROJECT_DIR}'"
+if ($LASTEXITCODE -ne 0) {
+  throw "run-setup-dkml.sh failed"
+}
 
 ########################### script ###############################
 
@@ -199,15 +252,16 @@ Write-Host @"
 Finished setup.
 
 To continue your testing, run in PowerShell:
-  \$env:CHERE_INVOKING = "yes"
-  \$env:MSYSTEM = "$env:msys2_system"
-  \$env:dkml_host_abi = "$env:dkml_host_abi"
-  \$env:abi_pattern = "$env:abi_pattern"
-  \$env:opam_root = "$env:opam_root"
-  \$env:exe_ext = "${env:exe_ext}"
-  \$env:PC_PROJECT_DIR = $PWD
+  `$env:CHERE_INVOKING = "yes"
+  `$env:MSYSTEM = "$env:msys2_system"
+  `$env:dkml_host_abi = "$env:dkml_host_abi"
+  `$env:abi_pattern = "$env:abi_pattern"
+  `$env:opam_root = "$env:opam_root"
+  `$env:exe_ext = "${env:exe_ext}"
+  `$env:PC_PROJECT_DIR = "$PWD"
 
-  msys64\usr\bin\bash -lc 'PATH="\$PWD/.ci/sd4/opamrun:\$PATH"; opamrun install XYZ.opam'
+Now you can use 'opamrun' to do opam commands like:
 
-Use can you any opam-like command you want.
+  msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun install XYZ.opam'
+  msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun exec -- sh ci/build-test.sh'
 "@

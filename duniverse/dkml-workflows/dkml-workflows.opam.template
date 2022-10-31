@@ -1,0 +1,6 @@
+# Until Dune 3+ the auto-generated '.opam' will have an invalid ["dune" "install" ...] step
+# that messes up with cross-compilation. Customized it to remove it.
+build: [
+  ["dune" "subst"] {dev}
+  ["dune" "build" "-p" name "-j" jobs "@install" "@runtest" {with-test} "@doc" {with-doc}]
+]

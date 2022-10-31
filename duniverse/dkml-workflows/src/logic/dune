@@ -1,3 +1,10 @@
 (library
  (name workflow_logic)
  (libraries astring jingoo uutf))
+
+(rule
+ (target version.ml)
+ (action
+  (with-stdout-to
+   %{target}
+   (echo "let dune_project_version = {|%{version:dkml-workflows}|}"))))
