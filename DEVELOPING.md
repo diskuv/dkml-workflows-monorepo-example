@@ -12,10 +12,7 @@ make duniverse
 # So we only do the monorepo pull. You will need to update the .locked file yourself.
 touch your_example.opam.locked
 make duniverse
-```
 
-Then
-
-```bash
+# Regenerate the DKML workflow scaffolding
 opam exec -- generate-setup-dkml-scaffold && dune build '@gen-dkml' --auto-promote
 ```

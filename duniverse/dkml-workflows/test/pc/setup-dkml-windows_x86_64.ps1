@@ -1455,9 +1455,6 @@ if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
     do_install_compiler two
 fi
 
-# Done with Opam cache!
-do_save_opam_cache
-
 do_summary() {
     do_summary_NAME=$1
     shift
@@ -1470,6 +1467,9 @@ do_summary dkml
 if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
     do_summary two
 fi
+
+# Done with Opam cache!
+do_save_opam_cache
 
 '@
 Set-Content -Path ".ci\sd4\run-setup-dkml.sh" -Encoding Unicode -Value $Content
