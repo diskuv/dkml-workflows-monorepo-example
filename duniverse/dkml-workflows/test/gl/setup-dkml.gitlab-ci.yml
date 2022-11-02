@@ -49,7 +49,8 @@ variables:
         - ${opam_root_cacheable}/repo
         - ${opam_root_cacheable}/download-cache
         - ${opam_root_cacheable}/.ci.root-init
-        - ${opam_root_cacheable}/.ci.repo-init
+        - ${opam_root_cacheable}/.ci.dkml.repo-init
+        - ${opam_root_cacheable}/.ci.two.repo-init
         - .ci/sd4/g
         - .ci/sd4/vsenv.sh
         - msys64
@@ -1197,7 +1198,7 @@ variables:
       do_switch_active
 
       do_opam_repositories_add() {
-          section_begin "opam-repo-add" "Add Diskuv opam repository"
+          section_begin "opam-repo-add" "Add 'diskuv' opam repository"
           if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
               opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
           fi
@@ -1727,6 +1728,21 @@ variables:
           section_end fill-skipped-cache-entries
       }
       do_fill_skipped_cache_entries
+
+      do_at_least_one_artifact() {
+          install -d dist
+          find dist -mindepth 1 -maxdepth 1 >.ci/dist.files
+          if [ ! -s .ci/dist.files ]; then
+              section_begin one-artifact "Create empty artifact file"
+
+              # Avoid confusing "ERROR: No files to upload" in GitLab CI
+              touch dist/.keep
+              echo "Created dist/.keep"
+
+              section_end one-artifact
+          fi
+      }
+      do_at_least_one_artifact
 
       '@
       Set-Content -Path ".ci\sd4\run-teardown-dkml.sh" -Encoding Unicode -Value $Content
@@ -2774,7 +2790,7 @@ variables:
       do_switch_active
 
       do_opam_repositories_add() {
-          section_begin "opam-repo-add" "Add Diskuv opam repository"
+          section_begin "opam-repo-add" "Add 'diskuv' opam repository"
           if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
               opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
           fi
@@ -3122,6 +3138,21 @@ variables:
           section_end fill-skipped-cache-entries
       }
       do_fill_skipped_cache_entries
+
+      do_at_least_one_artifact() {
+          install -d dist
+          find dist -mindepth 1 -maxdepth 1 >.ci/dist.files
+          if [ ! -s .ci/dist.files ]; then
+              section_begin one-artifact "Create empty artifact file"
+
+              # Avoid confusing "ERROR: No files to upload" in GitLab CI
+              touch dist/.keep
+              echo "Created dist/.keep"
+
+              section_end one-artifact
+          fi
+      }
+      do_at_least_one_artifact
 
       end_of_script
 
@@ -4228,7 +4259,7 @@ variables:
       do_switch_active
 
       do_opam_repositories_add() {
-          section_begin "opam-repo-add" "Add Diskuv opam repository"
+          section_begin "opam-repo-add" "Add 'diskuv' opam repository"
           if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
               opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
           fi
@@ -4576,6 +4607,21 @@ variables:
           section_end fill-skipped-cache-entries
       }
       do_fill_skipped_cache_entries
+
+      do_at_least_one_artifact() {
+          install -d dist
+          find dist -mindepth 1 -maxdepth 1 >.ci/dist.files
+          if [ ! -s .ci/dist.files ]; then
+              section_begin one-artifact "Create empty artifact file"
+
+              # Avoid confusing "ERROR: No files to upload" in GitLab CI
+              touch dist/.keep
+              echo "Created dist/.keep"
+
+              section_end one-artifact
+          fi
+      }
+      do_at_least_one_artifact
 
       end_of_script
 

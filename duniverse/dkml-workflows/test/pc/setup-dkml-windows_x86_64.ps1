@@ -1269,7 +1269,7 @@ do_switch_active() {
 do_switch_active
 
 do_opam_repositories_add() {
-    section_begin "opam-repo-add" "Add Diskuv opam repository"
+    section_begin "opam-repo-add" "Add 'diskuv' opam repository"
     if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
         opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
     fi

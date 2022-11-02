@@ -34,7 +34,8 @@ variables:
         - ${opam_root_cacheable}/repo
         - ${opam_root_cacheable}/download-cache
         - ${opam_root_cacheable}/.ci.root-init
-        - ${opam_root_cacheable}/.ci.repo-init
+        - ${opam_root_cacheable}/.ci.dkml.repo-init
+        - ${opam_root_cacheable}/.ci.two.repo-init
         - .ci/sd4/g
         - .ci/sd4/vsenv.sh
         - msys64

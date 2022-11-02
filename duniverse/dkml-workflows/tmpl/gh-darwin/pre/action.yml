@@ -123,7 +123,8 @@ runs:
           {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/repo
           {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/download-cache
           {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.root-init
-          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.repo-init
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.dkml.repo-init
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.two.repo-init
         key:
           "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}{%- endraw %}"
 

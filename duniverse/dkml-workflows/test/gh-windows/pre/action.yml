@@ -1162,7 +1162,7 @@ runs:
         do_switch_active
 
         do_opam_repositories_add() {
-            section_begin "opam-repo-add" "Add Diskuv opam repository"
+            section_begin "opam-repo-add" "Add 'diskuv' opam repository"
             if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
                 opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
             fi
@@ -1502,6 +1502,21 @@ runs:
         }
         do_fill_skipped_cache_entries
 
+        do_at_least_one_artifact() {
+            install -d dist
+            find dist -mindepth 1 -maxdepth 1 >.ci/dist.files
+            if [ ! -s .ci/dist.files ]; then
+                section_begin one-artifact "Create empty artifact file"
+
+                # Avoid confusing "ERROR: No files to upload" in GitLab CI
+                touch dist/.keep
+                echo "Created dist/.keep"
+
+                section_end one-artifact
+            fi
+        }
+        do_at_least_one_artifact
+
         end_of_script
 
         install -d .ci/sd4
@@ -1635,7 +1650,7 @@ runs:
       shell: bash
       run: |
         set -x
-        echo 'a778f5-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
+        echo '4b5e72-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
         echo '${{ steps.full_matrix_vars.outputs.abi_pattern }}-${{ steps.full_matrix_vars.outputs.vsstudio_arch }}-${{ steps.full_matrix_vars.outputs.vsstudio_hostarch }}-${{ steps.full_matrix_vars.outputs.vsstudio_dir }}-${{ steps.full_matrix_vars.outputs.vsstudio_vcvarsver }}-${{ steps.full_matrix_vars.outputs.vsstudio_winsdkver }}-${{ steps.full_matrix_vars.outputs.vsstudio_msvspreference }}-${{ steps.full_matrix_vars.outputs.vsstudio_cmakegenerator }}' > .ci/sd4/cachekey.vsstudio
         echo '${{ inputs.OCAML_COMPILER }}-${{ inputs.DISKUV_OPAM_REPOSITORY }}-${{ inputs.DKML_COMPILER }}-${{ inputs.CONF_DKML_CROSS_TOOLCHAIN }}' > .ci/sd4/cachekey.ci.inputs
 
@@ -1660,7 +1675,8 @@ runs:
           ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/repo
           ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/download-cache
           ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.root-init
-          ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.repo-init
+          ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.dkml.repo-init
+          ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.two.repo-init
         key:
           "1_${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}"
 

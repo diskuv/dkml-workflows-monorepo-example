@@ -1467,6 +1467,21 @@ runs:
         }
         do_fill_skipped_cache_entries
 
+        do_at_least_one_artifact() {
+            install -d dist
+            find dist -mindepth 1 -maxdepth 1 >.ci/dist.files
+            if [ ! -s .ci/dist.files ]; then
+                section_begin one-artifact "Create empty artifact file"
+
+                # Avoid confusing "ERROR: No files to upload" in GitLab CI
+                touch dist/.keep
+                echo "Created dist/.keep"
+
+                section_end one-artifact
+            fi
+        }
+        do_at_least_one_artifact
+
         end_of_script
 
     - name: Prepare cache keys
@@ -1531,7 +1546,8 @@ runs:
           ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/repo
           ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/download-cache
           ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.root-init
-          ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.repo-init
+          ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.dkml.repo-init
+          ${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}/.ci.two.repo-init
         key:
           "1_${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}"
 

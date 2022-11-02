@@ -103,3 +103,18 @@ do_fill_skipped_cache_entries() {
     section_end fill-skipped-cache-entries
 }
 do_fill_skipped_cache_entries
+
+do_at_least_one_artifact() {
+    install -d dist
+    find dist -mindepth 1 -maxdepth 1 >.ci/dist.files
+    if [ ! -s .ci/dist.files ]; then
+        section_begin one-artifact "Create empty artifact file"
+
+        # Avoid confusing "ERROR: No files to upload" in GitLab CI
+        touch dist/.keep
+        echo "Created dist/.keep"
+
+        section_end one-artifact
+    fi
+}
+do_at_least_one_artifact
