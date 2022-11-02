@@ -58,7 +58,8 @@ $(PACKAGENAME).opam.locked: $(PACKAGENAME).opam _opam/bin/opam-monorepo
 	OPAMSWITCH="$$PWD" && if [ -x /usr/bin/cygpath ]; then OPAMSWITCH=$$(/usr/bin/cygpath -aw "$$OPAMSWITCH"); fi && \
 	  opam monorepo lock $(PACKAGENAME) --ocaml-version=$(OCAMLVERSION) --require-cross-compile -vv
 
-duniverse/README.md: $(PACKAGENAME).opam.locked
+.PHONY: duniverse
+duniverse: $(PACKAGENAME).opam.locked
 	OPAMSWITCH="$$PWD" && if [ -x /usr/bin/cygpath ]; then OPAMSWITCH=$$(/usr/bin/cygpath -aw "$$OPAMSWITCH"); fi && \
 	  opam monorepo pull --yes && \
 	  touch "$@"

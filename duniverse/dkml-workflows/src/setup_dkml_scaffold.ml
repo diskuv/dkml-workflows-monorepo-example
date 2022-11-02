@@ -60,12 +60,7 @@ let scaffold_gl ~output_dir () =
   (setenv
   OCAMLRUNPARAM
   b
-  (run
-    gl-setup-dkml-yml
-    ; Exclude macOS until you have a https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/issues approved
-    --exclude-macos
-    --output-file
-    %%{target}))))
+  (run gl-setup-dkml-yml --output-file %%{target}))))
 
 (rule
 (alias gen-dkml)

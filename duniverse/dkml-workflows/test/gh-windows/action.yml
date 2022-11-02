@@ -368,6 +368,20 @@ runs:
             unix_opam_root_cacheable=$opam_root_cacheable
         fi
         
+        # Set TEMP variable which is used, among other things, for OCaml's
+        # [Filename.temp_dir_name] on Win32, and by with-dkml.exe on Windows
+        if [ -x /usr/bin/cygpath ]; then
+            if [ -n "${RUNNER_TEMP:-}" ]; then
+                # GitHub Actions
+                TEMP=$(cygpath -am "$RUNNER_TEMP")
+            else
+                # GitLab CI/CD or desktop
+                install -d .ci/tmp
+                TEMP=$(cygpath -am ".ci/tmp")
+            fi
+            export TEMP
+        fi
+        
         # load VS studio environment
         if [ -e .ci/sd4/vsenv.sh ]; then
             # shellcheck disable=SC1091
@@ -467,14 +481,14 @@ runs:
             # Bootstrap from historical release
             runit_BOOTSTRAPPED=0
         
-            #   Bootstrap Opam from fdopen (Windows)
+            #   Bootstrap opam from fdopen (Windows)
             if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "${FDOPEN_OPAMEXE_BOOTSTRAP:-}" = "true" ]; then
                 if [ -e .ci/sd4/opam64/bin/opam.exe ] && [ -e .ci/sd4/opam64/bin/opam-installer.exe ]; then
                     runit_BOOTSTRAPPED=1
                 else
                     case "$dkml_host_abi" in
                     windows_*)
-                        echo 'Bootstrap Opam from fdopen (Windows) ...'
+                        echo 'Bootstrap opam from fdopen (Windows) ...'
                         install -d .ci/sd4/bs/bin
                         wget -O "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam64.tar.xz
         
@@ -503,7 +517,7 @@ runs:
                 cd .ci/sd4/bs
         
                 if [ ! -e version ] || [ "$(cat version)" != "$bootstrap_opam_version" ]; then
-                    echo 'Bootstrap Opam from historical release (non-Windows; Windows non-fdopen) ...'
+                    echo 'Bootstrap opam from historical release (non-Windows; Windows non-fdopen) ...'
                     if command -v curl; then
                         curl -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
                     else
@@ -527,7 +541,7 @@ runs:
             case "$runit_BOOTSTRAPPED,$bootstrap_opam_version,$dkml_host_abi" in
             0,os,darwin_*)
                 if ! command -v opam; then
-                    echo 'Bootstrap Opam from package manager (macOS) ...'
+                    echo 'Bootstrap opam from package manager (macOS) ...'
                     brew install gpatch
                     brew install opam
                 fi
@@ -535,7 +549,7 @@ runs:
                 ;;
             0,os,linux_x86)
                 if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                    echo 'Bootstrap Opam from GitHub ocaml/opam release (Linux x86) ...'
+                    echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86) ...'
                     install -d .ci/sd4/bs/bin
                     wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
                     sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
@@ -554,7 +568,7 @@ runs:
                 ;;
             0,os,linux_x86_64)
                 if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                    echo 'Bootstrap Opam from GitHub ocaml/opam release (Linux x86_64) ...'
+                    echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86_64) ...'
                     install -d .ci/sd4/bs/bin
                     wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
                     sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
@@ -573,7 +587,7 @@ runs:
                 ;;
             esac
         }
-        section_begin bootstrap-opam 'Bootstrap Opam'
+        section_begin bootstrap-opam 'Bootstrap opam'
         do_bootstrap
         section_end bootstrap-opam
         
@@ -581,7 +595,7 @@ runs:
         #   We use .tar rather than .tar.gz/.tar.bz2 because we can repeatedly add to an uncompressed .tar. But we need to
         #   start with an empty tarball since some tar programs will only add ('tar rf xyz.tar') to an existing .tar.
         install -d .ci/sd4/dist
-        tar cf .ci/sd4/dist/env-opam.tar -T /dev/null
+        tar cf .ci/sd4/dist/opam-with-env.tar -T /dev/null
         
         do_get_dockcross() {
             if [ -n "${dockcross_image:-}" ]; then
@@ -695,7 +709,7 @@ runs:
                 chmod +x .ci/sd4/dockcross
         
                 # Bundle for consumers of setup-dkml.yml
-                do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/dockcross .ci/sd4/dockcross-real
+                do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/dockcross .ci/sd4/dockcross-real
         
                 section_end get-dockcross
             fi
@@ -736,7 +750,7 @@ runs:
             # Bundle Opam prerequisites (ManyLinux or Linux Docker)
             if [ -n "${docker_runner:-}" ] || [ -n "${dockcross_image:-}" ]; then
                 # Bundle for consumers of setup-dkml.yml
-                do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/bs/bin/rsync
+                do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/bs/bin/rsync
             fi
         }
         
@@ -827,7 +841,7 @@ runs:
         EOF
         
             chmod +x .ci/sd4/troubleshoot-opam.sh
-            do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/troubleshoot-opam.sh
+            do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/troubleshoot-opam.sh
         
             # ---------------
             # Create Opam support scripts (not needed for all platforms)
@@ -844,7 +858,7 @@ runs:
             /* | ?:*) # /a/b/c or C:\Windows
                 ;;
             *) # relative path
-                cat >.ci/sd4/env-opam-real <<EOF
+                cat >.ci/sd4/opam-with-env-real <<EOF
         #!/bin/sh
         set -euf
         export PATH="/work/.ci/sd4/bs/bin:/work/.ci/sd4/opamexe:\$PATH"
@@ -860,18 +874,27 @@ runs:
         unset OCAMLLIB
         unset OCAML_TOPLEVEL_PATH
         
-        echo "Running inside Docker container: \$*" >&2
+        # Optionally skip troubleshooting
+        troubleshooting=1
+        if [ "\$#" -ge 1 ] && [ "\$1" = "--no-troubleshooting" ]; then
+            shift
+            troubleshooting=0
+        fi
+        
+        echo "Running inside Docker container: opam \$*" >&2
         set +e
-        "\$@"
+        opam "\$@"
         exitcode=\$?
-        [ \$exitcode = 0 ] || "/work/.ci/sd4/troubleshoot-opam.sh" \$OPAMROOT
+        if [ \$troubleshooting = 1 ]; then
+            [ \$exitcode = 0 ] || "/work/.ci/sd4/troubleshoot-opam.sh" \$OPAMROOT
+        fi
         exit \$exitcode
         EOF
-                chmod +x .ci/sd4/env-opam-real
+                chmod +x .ci/sd4/opam-with-env-real
                 ;;
             esac
         
-            cat >.ci/sd4/env-opam-deescalate <<EOF
+            cat >.ci/sd4/deescalate <<EOF
         #!/bin/sh
         set -euf
         
@@ -884,10 +907,10 @@ runs:
         exec runuser -u ${USER_NAME} -g ${GROUP_NAME} -- "\$@"
         EOF
         
-            chmod +x .ci/sd4/env-opam-deescalate
+            chmod +x .ci/sd4/deescalate
         
             # -----------------------------------
-            # Create env-opam
+            # Create opam-with-env
             # -----------------------------------
         
             install -d .ci/sd4/dist
@@ -899,40 +922,40 @@ runs:
                 # from https://github.com/dockcross/dockcross/blob/96d87416f639af0204bdd42553e4b99315ca8476/imagefiles/entrypoint.sh#L31-L32
                 install -d .ci/sd4/edr
         
-                cat >.ci/sd4/env-opam <<EOF
+                cat >.ci/sd4/opam-with-env <<EOF
         #!/bin/sh
         set -euf
-        exec bash "\$${setup_WORKSPACE_VARNAME}"/.ci/sd4/dockcross --args "-v \$${setup_WORKSPACE_VARNAME}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/env-opam-real "\$@"
+        exec bash "\$${setup_WORKSPACE_VARNAME}"/.ci/sd4/dockcross --args "-v \$${setup_WORKSPACE_VARNAME}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/opam-with-env-real "\$@"
         EOF
-                chmod +x .ci/sd4/env-opam
+                chmod +x .ci/sd4/opam-with-env
         
                 # Bundle for consumers of setup-dkml.yml
-                echo '__ env-opam-real __' >&2
-                cat .ci/sd4/env-opam-real >&2
-                echo '___________________' >&2
-                do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/env-opam .ci/sd4/env-opam-real .ci/sd4/edr
+                echo '__ opam-with-env-real __' >&2
+                cat .ci/sd4/opam-with-env-real >&2
+                echo '________________________' >&2
+                do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env .ci/sd4/opam-with-env-real .ci/sd4/edr
         
             elif [ -n "${docker_runner:-}" ]; then
         
-                cat >.ci/sd4/env-opam <<EOF
+                cat >.ci/sd4/opam-with-env <<EOF
         #!/bin/sh
         set -euf
-        exec ${docker_runner:-} /work/.ci/sd4/env-opam-deescalate /work/.ci/sd4/env-opam-real "\$@"
+        exec ${docker_runner:-} /work/.ci/sd4/deescalate /work/.ci/sd4/opam-with-env-real "\$@"
         EOF
-                chmod +x .ci/sd4/env-opam
+                chmod +x .ci/sd4/opam-with-env
         
                 # Bundle for consumers of setup-dkml.yml
-                echo '__ env-opam-real __' >&2
-                cat .ci/sd4/env-opam-real >&2
-                echo '___________________' >&2
-                echo '__ env-opam-deescalate __' >&2
-                cat .ci/sd4/env-opam-deescalate >&2
-                echo '_________________________' >&2
-                do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/env-opam .ci/sd4/env-opam-real .ci/sd4/env-opam-deescalate
+                echo '__ opam-with-env-real __' >&2
+                cat .ci/sd4/opam-with-env-real >&2
+                echo '________________________' >&2
+                echo '__ deescalate __' >&2
+                cat .ci/sd4/deescalate >&2
+                echo '________________' >&2
+                do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env .ci/sd4/opam-with-env-real .ci/sd4/deescalate
         
             else
         
-                cat >.ci/sd4/env-opam <<EOF
+                cat >.ci/sd4/opam-with-env <<EOF
         #!/bin/sh
         set -euf
         export PATH="\$${setup_WORKSPACE_VARNAME}/.ci/sd4/bs/bin:\$${setup_WORKSPACE_VARNAME}/.ci/sd4/opamexe:\$PATH"
@@ -948,22 +971,31 @@ runs:
         unset OCAMLLIB
         unset OCAML_TOPLEVEL_PATH
         
-        echo "Running: \$*" >&2
+        # Optionally skip troubleshooting
+        troubleshooting=1
+        if [ "\$#" -ge 1 ] && [ "\$1" = "--no-troubleshooting" ]; then
+            shift
+            troubleshooting=0
+        fi
+        
+        echo "Running: opam \$*" >&2
         set +e
-        "\$@"
+        opam "\$@"
         exitcode=\$?
-        [ \$exitcode = 0 ] || "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/troubleshoot-opam.sh" \$OPAMROOT
+        if [ \$troubleshooting = 1 ]; then
+            [ \$exitcode = 0 ] || "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/troubleshoot-opam.sh" \$OPAMROOT
+        fi
         exit \$exitcode
         EOF
-                chmod +x .ci/sd4/env-opam
+                chmod +x .ci/sd4/opam-with-env
         
                 # Bundle for consumers of setup-dkml.yml
-                do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/env-opam
+                do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env
         
             fi
-            echo '__ env-opam __' >&2
-            cat .ci/sd4/env-opam >&2
-            echo '______________' >&2
+            echo '__ opam-with-env __' >&2
+            cat .ci/sd4/opam-with-env >&2
+            echo '___________________' >&2
         
             # -------
             # opamrun
@@ -1000,14 +1032,14 @@ runs:
             PATH="/usr/bin:\$PATH"
         fi
         
-        exec "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/env-opam" opam "\$@"
+        exec "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/opam-with-env" "\$@"
         EOF
             chmod +x .ci/sd4/opamrun/opamrun
         
             # Bundle for consumers of setup-dkml.yml
-            do_tar_rf .ci/sd4/dist/env-opam.tar .ci/sd4/opamrun
+            do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opamrun
         }
-        section_begin 'write-opam-scripts' 'Write and distribute opam scripts'
+        section_begin 'write-opam-scripts' 'Write opam scripts'
         do_write_opam_scripts
         section_end 'write-opam-scripts'
         
@@ -1060,56 +1092,10 @@ runs:
         fi
         
         section_begin opam-vars "Summary: opam global variables"
-        opamrun var --global || true
+        opamrun --no-troubleshooting var --global || true
         section_end opam-vars
         
         # Build OCaml
-        
-        # `opam repository` operations need the Opam switches present to perform
-        # updates, so this step comes after the Opam switch cache load but before the
-        # initial Opam switch creation.
-        
-        do_opam_repositories_config() {
-            do_opam_repositories_config_NAME=$1
-            shift
-        
-            section_begin "opam-repo-$do_opam_repositories_config_NAME" "Configure opam repositories"
-        
-            if [ -x /usr/bin/cygpath ]; then
-                if [ -n "${RUNNER_TEMP:-}" ]; then
-                    # GitHub Actions
-                    TEMP=$(cygpath -am "$RUNNER_TEMP")
-                else
-                    # GitLab CI/CD
-                    install -d .ci/tmp
-                    TEMP=$(cygpath -am ".ci/tmp")
-                fi
-                export TEMP
-            fi
-            if [ ! -e "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init" ]; then
-                opamrun repository remove default --switch "$do_opam_repositories_config_NAME" --yes || true
-                opamrun repository remove diskuv --switch "$do_opam_repositories_config_NAME" --yes || true
-                opamrun repository add default https://opam.ocaml.org --switch "$do_opam_repositories_config_NAME" --yes
-                opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
-                touch "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init"
-            fi
-        
-            # Whether .ci.repo-init or not, always set the `diskuv` repository url since it can change
-            opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
-            section_end "opam-repo-$do_opam_repositories_config_NAME"
-        }
-        do_opam_repositories_config dkml
-        if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
-            do_opam_repositories_config two
-        fi
-        
-        do_opam_repositories_update() {
-            section_begin "opam-repo-update" "Update opam repositories"
-            # Update both `default` and `diskuv` Opam repositories
-            opamrun update default diskuv
-            section_end "opam-repo-update"
-        }
-        do_opam_repositories_update
         
         do_switch_create() {
             do_switch_create_NAME=$1
@@ -1129,13 +1115,13 @@ runs:
             if [ $NOMINALLY_PRESENT = true ] && [ ! -e "$opam_root/$do_switch_create_NAME/.opam-switch/switch-config" ]; then
                 # Remove the switch name from Opam root, and any partial switch state.
                 # Ignore inevitable warnings/failure about missing switch.
-                opamrun switch remove "$do_switch_create_NAME" --yes || true
+                opamrun --no-troubleshooting switch remove "$do_switch_create_NAME" --yes || true
                 rm -rf "${opam_root:?}/$do_switch_create_NAME"
                 NOMINALLY_PRESENT=false
             fi
         
             if [ $NOMINALLY_PRESENT = false ]; then
-                opamrun switch create "$do_switch_create_NAME" --repos diskuv,default --empty --yes
+                opamrun switch create "$do_switch_create_NAME" --empty --yes
             fi
             section_end "switch-create-$do_switch_create_NAME"
         }
@@ -1145,10 +1131,52 @@ runs:
         else
             # Always create a secondary switch ... just empty. Avoid problems with cache content missing
             # and idempotency.
-            opamrun switch remove two --yes || true
+            opamrun --no-troubleshooting switch remove two --yes || true
             rm -rf "$opam_root/two"
             opamrun switch create two --empty --yes
         fi
+        
+        do_opam_repositories_add() {
+            section_begin "opam-repo-add" "Add Diskuv opam repository"
+            if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
+                opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
+            fi
+            section_end "opam-repo-add"
+        }
+        do_opam_repositories_add
+        
+        do_opam_repositories_config() {
+            do_opam_repositories_config_NAME=$1
+            shift
+        
+            section_begin "opam-repo-$do_opam_repositories_config_NAME" "Attach opam repositories to $do_opam_repositories_config_NAME"
+        
+            if [ ! -e "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init" ]; then
+                opamrun --no-troubleshooting repository remove default --switch "$do_opam_repositories_config_NAME" --yes || true
+                opamrun --no-troubleshooting repository remove diskuv --switch "$do_opam_repositories_config_NAME" --yes || true
+                opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
+                touch "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init"
+            fi
+        
+            # Whether .ci.repo-init or not, always set the `diskuv` repository url since it can change
+            section_end "opam-repo-$do_opam_repositories_config_NAME"
+        }
+        do_opam_repositories_config dkml
+        if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+            do_opam_repositories_config two
+        fi
+        
+        do_opam_repositories_update() {
+            section_begin "opam-repo-update" "Update opam repositories"
+            # The default repository may be the initial 'eor' (empty) repository
+            opamrun repository set-url default https://opam.ocaml.org --yes
+            # Always set the `diskuv` repository url since it can change
+            opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
+            # Update both `default` and `diskuv` Opam repositories
+            opamrun update default diskuv
+            section_end "opam-repo-update"
+        }
+        do_opam_repositories_update
         
         do_pins() {
             do_pins_NAME=$1
@@ -1476,7 +1504,7 @@ runs:
       shell: bash
       run: |
         set -x
-        echo '23d604-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
+        echo 'fe7a05-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
         echo '${{ steps.full_matrix_vars.outputs.abi_pattern }}-${{ steps.full_matrix_vars.outputs.vsstudio_arch }}-${{ steps.full_matrix_vars.outputs.vsstudio_hostarch }}-${{ steps.full_matrix_vars.outputs.vsstudio_dir }}-${{ steps.full_matrix_vars.outputs.vsstudio_vcvarsver }}-${{ steps.full_matrix_vars.outputs.vsstudio_winsdkver }}-${{ steps.full_matrix_vars.outputs.vsstudio_msvspreference }}-${{ steps.full_matrix_vars.outputs.vsstudio_cmakegenerator }}' > .ci/sd4/cachekey.vsstudio
         echo '${{ inputs.OCAML_COMPILER }}-${{ inputs.DISKUV_OPAM_REPOSITORY }}-${{ inputs.DKML_COMPILER }}-${{ inputs.CONF_DKML_CROSS_TOOLCHAIN }}' > .ci/sd4/cachekey.ci.inputs
 

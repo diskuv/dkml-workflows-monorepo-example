@@ -87,10 +87,7 @@ FIRST, add a dependency to `dkml-workflows` in your project.
      ```scheme
      (package
        ; ...
-       (dkml-workflows
-         (and
-          (>= 1.0.0)
-          :build))
+       (dkml-workflows (and (>= 1.1.0) :build))
        ...
      )
      ```
@@ -102,7 +99,7 @@ FIRST, add a dependency to `dkml-workflows` in your project.
      depends: [
        "ocaml"
        "dune" {>= "2.9"}
-       "dkml-workflows" {>= "1.0.0" & build}
+       "dkml-workflows" {>= "1.1.0" & build}
      ]
      # ...
      ```
@@ -165,16 +162,22 @@ At minimum the file should contain:
 #!/bin/sh
 set -euf
 
-# PATH. Add opamrun
+# Set project directory
 if [ -n "${CI_PROJECT_DIR:-}" ]; then
-    export PATH="$CI_PROJECT_DIR/.ci/sd4/opamrun:$PATH"
+    PROJECT_DIR="$CI_PROJECT_DIR"
 elif [ -n "${PC_PROJECT_DIR:-}" ]; then
-    export PATH="$PC_PROJECT_DIR/.ci/sd4/opamrun:$PATH"
+    PROJECT_DIR="$PC_PROJECT_DIR"
 elif [ -n "${GITHUB_WORKSPACE:-}" ]; then
-    export PATH="$GITHUB_WORKSPACE/.ci/sd4/opamrun:$PATH"
+    PROJECT_DIR="$GITHUB_WORKSPACE"
 else
-    export PATH="$PWD/.ci/sd4/opamrun:$PATH"
+    PROJECT_DIR="$PWD"
 fi
+if [ -x /usr/bin/cygpath ]; then
+    PROJECT_DIR=$(/usr/bin/cygpath -au "$PROJECT_DIR")
+fi
+
+# PATH. Add opamrun
+export PATH="$PROJECT_DIR/.ci/sd4/opamrun:$PATH"
 
 # Initial Diagnostics (optional but useful)
 opamrun switch
