@@ -29,7 +29,7 @@
   conf-dkml-cross-toolchain
   (dkml-workflows
    (and
-    (>= 1.0.0)
+    (>= 1.1.0)
     :build)))
  (tags
   (topics "to describe" your project)))

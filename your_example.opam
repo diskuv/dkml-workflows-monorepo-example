@@ -15,7 +15,7 @@ depends: [
   "dune" {>= "2.9" & = "2.9.3"}
   "diskuvbox"
   "conf-dkml-cross-toolchain"
-  "dkml-workflows" {>= "1.0.0" & build}
+  "dkml-workflows" {>= "1.1.0" & build}
   "odoc" {with-doc}
 ]
 build: [
