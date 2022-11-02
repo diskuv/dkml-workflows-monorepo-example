@@ -1091,7 +1091,7 @@ PATH="$setup_WORKSPACE/.ci/sd4/opamrun:$PATH"
 #      a PR!).
 #   2. We have to separate the Opam download cache from the other Opam
 #      caches
-if [ ! -e "$opam_root/.ci.root-init" ]; then
+if [ ! -s "$opam_root/.ci.root-init" ]; then # non-empty init file so can be cached irrespective of existence
     section_begin opam-init 'Initialize opam root'
 
     # Clear any partial previous attempt
@@ -1113,7 +1113,7 @@ if [ ! -e "$opam_root/.ci.root-init" ]; then
         opamrun init --disable-sandboxing --no-setup --kind local --bare "$setup_WORKSPACE/.ci/sd4/eor"
         ;;
     esac
-    touch "$opam_root/.ci.root-init"
+    echo yes > "$opam_root/.ci.root-init"
 
     section_end opam-init
 fi
@@ -1128,7 +1128,7 @@ do_switch_create() {
     do_switch_create_NAME=$1
     shift
 
-    section_begin "switch-create-$do_switch_create_NAME" "Create opam switch $do_switch_create_NAME"
+    section_begin "switch-create-$do_switch_create_NAME" "Create opam switch '$do_switch_create_NAME'"
     # Create, or recreate, the Opam switch. The Opam switch should not be
     # cached except for the compiler (confer docs for setup-ocaml GitHub
     # Action) which is the 'dkml' switch (or the 'two' switch).
@@ -1156,11 +1156,13 @@ do_switch_create dkml
 if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
     do_switch_create two
 else
+    section_begin "switch-create-two" "Create empty opam switch 'two'"
     # Always create a secondary switch ... just empty. Avoid problems with cache content missing
     # and idempotency.
     opamrun --no-troubleshooting switch remove two --yes || true
     rm -rf "$opam_root/two"
     opamrun switch create two --empty --yes
+    section_end "switch-create-two"
 fi
 
 do_switch_active() {
@@ -1183,15 +1185,16 @@ do_opam_repositories_config() {
     do_opam_repositories_config_NAME=$1
     shift
 
-    section_begin "opam-repo-$do_opam_repositories_config_NAME" "Attach Diskuv repository to $do_opam_repositories_config_NAME"
+    section_begin "opam-repo-$do_opam_repositories_config_NAME" "Attach repositories to $do_opam_repositories_config_NAME"
 
-    if [ ! -e "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init" ]; then
+    if [ ! -s "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init" ]; then # non-empty init file so can be cached irrespective of existence
+        opamrun --no-troubleshooting repository remove default --switch "$do_opam_repositories_config_NAME" --yes || true
         opamrun --no-troubleshooting repository remove diskuv --switch "$do_opam_repositories_config_NAME" --yes || true
-        opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
-        touch "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init"
+        opamrun repository add default --switch "$do_opam_repositories_config_NAME" --yes
+        opamrun repository add diskuv --switch "$do_opam_repositories_config_NAME" --yes
+        echo yes > "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init"
     fi
 
-    # Whether .ci.repo-init or not, always set the `diskuv` repository url since it can change
     section_end "opam-repo-$do_opam_repositories_config_NAME"
 }
 do_opam_repositories_config dkml

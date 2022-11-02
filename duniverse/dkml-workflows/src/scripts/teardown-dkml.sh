@@ -55,10 +55,51 @@ section_end teardown-info
 # Done with Opam cache!
 do_save_opam_cache() {
     if [ "$unix_opam_root_cacheable" = "$unix_opam_root" ]; then return; fi
-    section_begin save-opam-cache "Transferring Opam cache to $original_opam_root"
+    section_begin save-opam-cache "Transfer Opam cache to $original_opam_root"
     echo Starting transfer # need some output or GitLab CI will not display the section duration
     transfer_dir "$unix_opam_root" "$unix_opam_root_cacheable"
     echo Finished transfer
     section_end save-opam-cache
 }
 do_save_opam_cache
+
+do_fill_skipped_cache_entries() {
+    section_begin fill-skipped-cache-entries "Populate skipped cache entries"
+
+    # Needed to stop GitLab CI/CD cache warnings 'no matching files', etc.
+    if [ ! -e .ci/sd4/vsenv.sh ]; then
+        install -d .ci/sd4
+        rm -f .ci/sd4/vsenv.sh
+        touch .ci/sd4/vsenv.sh
+        chmod +x .ci/sd4/vsenv.sh
+        echo "Created empty vsenv.sh"
+    else
+        echo "Found vsenv.sh"
+    fi
+
+    if [ ! -e msys64 ]; then
+        rm -rf msys64
+        install -d msys64
+        touch msys64/.keep
+        echo "Created empty msys64"
+    else
+        echo "Found msys64/"
+    fi
+
+    if [ -s "$unix_opam_root_cacheable/.ci.dkml.repo-init" ]; then
+        echo "Found non-empty $unix_opam_root_cacheable/.ci.dkml.repo-init"
+    else
+        touch "$unix_opam_root_cacheable/.ci.dkml.repo-init"
+        echo "Created empty $unix_opam_root_cacheable/.ci.dkml.repo-init"
+    fi
+
+    if [ -s "$unix_opam_root_cacheable/.ci.two.repo-init" ]; then
+        echo "Found non-empty $unix_opam_root_cacheable/.ci.two.repo-init"
+    else
+        touch "$unix_opam_root_cacheable/.ci.two.repo-init"
+        echo "Created empty $unix_opam_root_cacheable/.ci.two.repo-init"
+    fi
+
+    section_end fill-skipped-cache-entries
+}
+do_fill_skipped_cache_entries

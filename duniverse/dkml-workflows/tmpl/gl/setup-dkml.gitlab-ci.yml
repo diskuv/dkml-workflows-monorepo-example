@@ -63,6 +63,8 @@ variables:
     # Within the shell scripts `setup-dkml.sh` and `checkout-code.sh` the section color is
     # bright blue (ESC [94m); we purposely use a different color so we know whether to look
     # in this GitLab script (cyan) or in a script (bright blue).
+    #
+    # Note: This is repeated in the after_script section.
     - $esc="$([char]27)"; $cr="$([char]13)"; $TXT_SECTION="${esc}[36m"; $TXT_CLEAR="${esc}[0m"
     - |
       function Get-CurrentEpochSecs {
@@ -123,8 +125,8 @@ variables:
     # ------------------ SECTION END Install VSSetup
     - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):install-vssetup${cr}${esc}[0K"
 
-    # ------------------ SECTION BEGIN Write Scripts
-    - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):write-scripts[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Write Scripts"
+    # ------------------ SECTION BEGIN Write pre scripts
+    - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):write-pre-scripts[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Write pre scripts"
 
     #   POSIX and AWK scripts
 
@@ -150,13 +152,6 @@ variables:
       '@
       Set-Content -Path ".ci\sd4\run-setup-dkml.sh" -Encoding Unicode -Value $Content
     - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/run-setup-dkml.sh'
-
-    - |
-      $Content = @'
-      {{ gl_teardown_dkml_script }}
-      '@
-      Set-Content -Path ".ci\sd4\run-teardown-dkml.sh" -Encoding Unicode -Value $Content
-    - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/run-teardown-dkml.sh'
 
     - |
       $Content = @'
@@ -190,8 +185,8 @@ variables:
       '@
       Set-Content -Path ".ci\sd4\get-msvcpath-into-msys2.cmd" -Encoding Default -Value $Content
 
-    # ------------------ SECTION END Write Scripts
-    - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):write-scripts${cr}${esc}[0K"
+    # ------------------ SECTION END Write pre scripts
+    - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):write-pre-scripts${cr}${esc}[0K"
 
     - msys64\usr\bin\bash -lc "sh .ci/sd4/run-checkout-code.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
 
@@ -232,6 +227,37 @@ variables:
     - msys64\usr\bin\bash -lc "sh .ci/sd4/run-setup-dkml.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
   script:
     - 'Write-Host "Override the .gitlab-ci.yml configuration ...`n  build_win32:`n    script:`nto configure your Windows build."'
+  after_script:
+    # ------------------
+    # Section formatting
+    # ------------------
+    #
+    # Note: This is repeated in the before_script section.
+    - $esc="$([char]27)"; $cr="$([char]13)"; $TXT_SECTION="${esc}[36m"; $TXT_CLEAR="${esc}[0m"
+    - |
+      function Get-CurrentEpochSecs {
+          [long]$timestamp = [math]::Round((([datetime]::UtcNow) - (Get-Date -Date '1/1/1970')).TotalMilliseconds)
+          [math]::Round($timestamp / 1000)
+      }
+
+    # ------------------ SECTION BEGIN Write post scripts
+    - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):write-post-scripts[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Write post scripts"
+
+    #   POSIX and AWK scripts
+
+    - If ( !(Test-Path -Path .ci\sd4 ) ) { New-Item .ci\sd4 -ItemType Directory | Out-Null }
+
+    - |
+      $Content = @'
+      {{ gl_teardown_dkml_script }}
+      '@
+      Set-Content -Path ".ci\sd4\run-teardown-dkml.sh" -Encoding Unicode -Value $Content
+    - if (Test-Path -Path msys64\usr\bin\bash.exe) { msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/run-teardown-dkml.sh' }
+
+    # ------------------ SECTION END Write post scripts
+    - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):write-post-scripts${cr}${esc}[0K"
+
+    - if (Test-Path -Path msys64\usr\bin\bash.exe) { msys64\usr\bin\bash -lc "sh .ci/sd4/run-teardown-dkml.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'" }
 
 .macos:setup-dkml:
   # prettier-ignore
@@ -243,7 +269,7 @@ variables:
   tags: [shared-macos-amd64]
   extends: .common:setup-dkml
   before_script:
-    - echo "Writing scripts ..."
+    - echo "Writing pre scripts ..."
     - |
       install -d .ci/sd4
       cat > .ci/sd4/common-values.sh <<'end_of_script'
@@ -260,20 +286,18 @@ variables:
 
     - 'sh .ci/sd4/run-checkout-code.sh CI_PROJECT_DIR "${CI_PROJECT_DIR}"'
     - 'sh .ci/sd4/run-setup-dkml.sh CI_PROJECT_DIR "${CI_PROJECT_DIR}"'
-
-    - echo "Filling cache holes ..."
-    - |
-      # Needed only to stop GitLab CI/CD cache warnings 'no matching files'
-      install -d .ci/sd4
-      rm -f .ci/sd4/vsenv.sh
-      touch .ci/sd4/vsenv.sh
-      chmod +x .ci/sd4/vsenv.sh
-
-      rm -rf msys64
-      install -d msys64
-      touch msys64/.keep
   script:
     - 'printf "Override the .gitlab-ci.yml configuration ...\n  build_macos:\n    script:\nto configure your macOS build.\n"'
+  after_script:
+    - echo "Writing post scripts ..."
+    - |
+      install -d .ci/sd4
+
+      cat > .ci/sd4/run-teardown-dkml.sh <<'end_of_script'
+      {{ gl_teardown_dkml_script }}
+      end_of_script
+
+    - 'sh .ci/sd4/run-teardown-dkml.sh CI_PROJECT_DIR "${CI_PROJECT_DIR}"'
 
 .linux:setup-dkml:
   # prettier-ignore
@@ -334,7 +358,7 @@ variables:
     #   bash: dockcross needs Bash
     #   git: For checkout-code.sh, and for opam
     - apk add tar bash git
-    - echo "Writing scripts ..."
+    - echo "Writing pre scripts ..."
     - |
       install -d .ci/sd4
 
@@ -352,17 +376,15 @@ variables:
 
     - 'sh .ci/sd4/run-checkout-code.sh CI_PROJECT_DIR "${CI_PROJECT_DIR}"'
     - 'sh .ci/sd4/run-setup-dkml.sh CI_PROJECT_DIR "${CI_PROJECT_DIR}"'
-
-    - echo "Filling cache holes ..."
-    - |
-      # Needed only to stop GitLab CI/CD cache warnings 'no matching files'
-      install -d .ci/sd4
-      rm -f .ci/sd4/vsenv.sh
-      touch .ci/sd4/vsenv.sh
-      chmod +x .ci/sd4/vsenv.sh
-
-      rm -rf msys64
-      install -d msys64
-      touch msys64/.keep
   script:
     - 'printf "Override the .gitlab-ci.yml configuration ...\n  build_linux:\n    script:\nto configure your Linux build.\n"'
+  after_script:
+    - echo "Writing post scripts ..."
+    - |
+      install -d .ci/sd4
+
+      cat > .ci/sd4/run-teardown-dkml.sh <<'end_of_script'
+      {{ gl_teardown_dkml_script }}
+      end_of_script
+
+    - 'sh .ci/sd4/run-teardown-dkml.sh CI_PROJECT_DIR "${CI_PROJECT_DIR}"'
