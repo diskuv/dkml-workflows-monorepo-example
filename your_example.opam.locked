@@ -104,7 +104,7 @@ pin-depends: [
   ]
   [
     "dkml-workflows.1.1.0"
-    "git+https://github.com/diskuv/dkml-workflows.git#15439554a34bc8e2d117bc800bcfb0500dfc7d6d"
+    "git+https://github.com/diskuv/dkml-workflows.git#f960b4ffe07e5152f8e6ce0bbf78cb6bf41fcbec"
   ]
   [
     "dune-build-info.2.9.3"
@@ -300,7 +300,7 @@ x-opam-monorepo-duniverse-dirs: [
     ]
   ]
   [
-    "git+https://github.com/diskuv/dkml-workflows.git#15439554a34bc8e2d117bc800bcfb0500dfc7d6d"
+    "git+https://github.com/diskuv/dkml-workflows.git#f960b4ffe07e5152f8e6ce0bbf78cb6bf41fcbec"
     "dkml-workflows"
   ]
   [

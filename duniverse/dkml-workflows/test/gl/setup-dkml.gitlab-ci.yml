@@ -1570,7 +1570,7 @@ variables:
   script:
     - 'Write-Host "Override the .gitlab-ci.yml configuration ...`n  build_win32:`n    script:`nto configure your Windows build."'
 
-.setup_macos:
+.macos:setup-dkml:
   # prettier-ignore
   parallel:
     matrix: [
