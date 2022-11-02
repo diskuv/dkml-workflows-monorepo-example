@@ -45,12 +45,28 @@ jobs:
 
       - name: Setup DKML on a Windows host
         if: startsWith(matrix.dkml_host_abi, 'windows_')
-        uses: ./test/gh-windows
+        uses: ./test/gh-windows/pre
 
       - name: Setup DKML on a Darwin host
         if: startsWith(matrix.dkml_host_abi, 'darwin_')
-        uses: ./test/gh-darwin
+        uses: ./test/gh-darwin/pre
 
       - name: Setup DKML on a Linux host
         if: startsWith(matrix.dkml_host_abi, 'linux_')
-        uses: ./test/gh-linux
+        uses: ./test/gh-linux/pre
+    
+      # This is the spot for custom build logic
+
+      # The Teardown DKML action will finalize caching, etc.
+
+      - name: Teardown DKML on a Windows host
+        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        uses: ./test/gh-windows/post
+
+      - name: Teardown DKML on a Darwin host
+        if: startsWith(matrix.dkml_host_abi, 'darwin_')
+        uses: ./test/gh-darwin/post
+
+      - name: Teardown DKML on a Linux host
+        if: startsWith(matrix.dkml_host_abi, 'linux_')
+        uses: ./test/gh-linux/post

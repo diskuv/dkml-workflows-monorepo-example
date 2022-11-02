@@ -1,0 +1,12 @@
+(rule
+ (target action.gen.yml)
+ (action
+  (setenv
+   OCAMLRUNPARAM
+   b
+   (run %{project_root}/src/gh_dkml_action_yml.exe --phase pre --output-darwin %{target}))))
+
+(rule
+ (alias runtest)
+ (action
+  (diff action.yml action.gen.yml)))

@@ -1,0 +1,211 @@
+# setup-dkml
+#   Short form: sd4
+
+name: pre-dkml
+author: Diskuv, Inc.
+description: Setup before building OCaml native executables for Linux
+
+# WARNING: The inputs.*.default seem to do nothing!
+# 2022-10-21: Unclear if warning still applies after move from a GitHub child workflow to a GitHub composite action
+inputs:
+  FDOPEN_OPAMEXE_BOOTSTRAP:
+    description: "Use opam.exe from fdopen on Windows. Typically only used when bootstrapping Opam for the first time. May be needed to solve '\"create_process\" failed on sleep: Bad file descriptor' which may need https://github.com/ocaml/opam/commit/417b97d8cfada35682a0f4107eb2e4f9e24fba91"
+    required: false
+    default: 'false'
+  CACHE_PREFIX:
+    description: The prefix of the cache keys.
+    required: false
+    default: "v1"
+  OCAML_COMPILER:
+    description: "The version of the OCaml compiler, as tagged by the https://github.com/diskuv/dkml-base-compiler repository. If not specified the latest compiler, or the version associated with the 'dkml-compiler' input, is used. Currently only 4.12.1 is supported"
+    required: false
+  DKML_COMPILER:
+    description: "Git branch, tag or commit for dkml-compiler. However if OCAML_COMPILER is specified the 'dkml-base-compiler' version is taken from OCAML_COMPILER."
+    required: false
+    default: "" # "@repository@" = Opam ; "" = latest from default branch of git clone
+  CONF_DKML_CROSS_TOOLCHAIN:
+    description: "Git branch, tag or commit for conf-dkml-cross-toolchain"
+    required: false
+    default: "@repository@" # "@repository@" = Opam ; "" = latest from default branch of git clone
+  DISKUV_OPAM_REPOSITORY:
+    description: "Git branch, tag or commit for diskuv-opam-repository"
+    required: false
+    default: "" # DEFAULT_DISKUV_OPAM_REPOSITORY_TAG is used as default for empty strings
+  VERBOSE:
+    description: "Turn on verbose logging"
+    required: false
+    default: 'false'
+  SECONDARY_SWITCH:
+    description: "Turn on secondary 'two' switch"
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Full matrix variables
+      shell: bash
+      # Every matrix variable lookup in this Action should use the output of this step. Even
+      # the matrix variables that the user must specify (ex. dkml_host_abi) should be
+      # referenced using [steps.full_matrix_vars.outputs.dkml_host_abi] rather than
+      # [matrix.dkml_host_abi] so that there is a single place to edit for variable changes.
+      id: full_matrix_vars
+      run: |
+        # Select correct Linux matrix variables
+        case "{% raw -%}${{ matrix.dkml_host_abi }}{%- endraw %}" in
+        {% for (abi,abi_vars) in gh_vars %}{%- if abi_vars.dkml_host_os == "linux" -%}{{ nl }}        {{ abi }}){{ nl }}          {% for (name,value) in abi_vars %}{{ name }}={{ squot }}{{ value }}{{ squot }} {%- if loop.last %} ;; {%- else -%} ; {%- endif %}{{ nl }}          {% endfor %}{%- endif %}{% endfor %}
+        *)  echo "FATAL: Unsupported dkml_host_abi=$dkml_host_abi in Linux action.yml"; exit 107 ;;
+        esac
+
+        add() {
+          echo "$1=$2" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_ENV
+        }
+
+        add dkml_host_abi "$dkml_host_abi"
+        add abi_pattern "$abi_pattern"
+        add opam_root "$opam_root"
+        add opam_root_cacheable "$opam_root_cacheable"
+        add exe_ext "${exe_ext:-}"
+        add bootstrap_opam_version "${bootstrap_opam_version:-}"
+        add ocaml_options "${ocaml_options:-}"
+
+        add dockcross_image "${dockcross_image:-}"
+        add dockcross_run_extra_args "${dockcross_run_extra_args:-}"
+        add docker_runner "${docker_runner:-}"
+        add in_docker "${in_docker:-}"
+
+        #   GitHub Actions uses Docker Buildx, so use custom 'dkml-dockcross/*' cached image which speeds up builds
+        add dockcross_image_custom_prefix "dkml-"
+
+    - name: Write POSIX shell and AWK scripts
+      shell: bash
+      run: |
+        install -d .ci/sd4
+
+        cat > .ci/sd4/common-values.sh <<'end_of_script'
+        {{ gh_common_values_script }}
+        end_of_script
+
+        cat > .ci/sd4/run-checkout-code.sh <<'end_of_script'
+        {{ gh_checkout_code_script }}
+        end_of_script
+
+        cat > .ci/sd4/run-setup-dkml.sh <<'end_of_script'
+        {{ gh_setup_dkml_script }}
+        end_of_script
+
+        cat > .ci/sd4/run-teardown-dkml.sh <<'end_of_script'
+        {{ gh_teardown_dkml_script }}
+        end_of_script
+
+    - name: Prepare cache keys
+      # An undocumented bug with GitHub Actions is that a space in the key
+      # will "succeed" but it never gets restored. So we will hash a
+      # user-friendly file instead.
+      shell: bash
+      run: |
+        set -x
+        echo '{{ gh_cachekey_opambin }}' > .ci/sd4/cachekey.opam.binaries
+        echo '{{ gh_cachekey_vsstudio }}' > .ci/sd4/cachekey.vsstudio
+        echo '{{ gh_cachekey_ci_inputs }}' > .ci/sd4/cachekey.ci.inputs
+
+    # Bootstrapping Opam
+
+    - name: Cache Opam bootstrap by OS
+      uses: actions/cache@v3
+      id: cache-sd4-bs
+      with:
+        path: .ci/sd4/bs
+        key:
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-bs-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}{%- endraw %}"
+
+    # ------
+    # BEGIN Docker (ManyLinux)
+    #   We use buildx which can cache into GitHub Actions Cache (type=gha)
+
+    - name: Set up Docker Buildx (ManyLinux)
+      if: steps.full_matrix_vars.outputs.dockcross_image != ''
+      id: buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Configure Docker (ManyLinux)
+      if: steps.full_matrix_vars.outputs.dockcross_image != ''
+      shell: bash
+      run: |
+        install -d .ci/sd4/dockcross-ctx
+        printf 'FROM %s\nRUN echo done fetching image' '{% raw -%}${{ steps.full_matrix_vars.outputs.dockcross_image }}{%- endraw %}' > .ci/sd4/dockcross-ctx/Dockerfile
+
+    - name: Fetch dockcross image (ManyLinux)
+      if: steps.full_matrix_vars.outputs.dockcross_image != ''
+      uses: docker/build-push-action@v3
+      with:
+        context: .ci/sd4/dockcross-ctx
+        builder: "{% raw -%}${{ steps.buildx.outputs.name }}{%- endraw %}"
+        load: true
+        tags: dkml-{% raw -%}${{ steps.full_matrix_vars.outputs.dockcross_image }}{%- endraw %}
+        cache-from: type=gha,scope={% raw -%}${{ github.workflow }}{%- endraw %}
+        cache-to: type=gha,mode=max,scope={% raw -%}${{ github.workflow }}{%- endraw %}
+
+    # END Docker (ManyLinux)
+    # ------
+
+    - name: Cache Opam root by (host,target)
+      uses: actions/cache@v3
+      id: cache-sd4-opamroot
+      with:
+        path: |
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/config
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/dkml
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/two
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/repo
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/download-cache
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.root-init
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.repo-init
+        key:
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}{%- endraw %}"
+
+    # The action/checkout steps used for pinning will re-use existing Git objects
+    # because of caching
+    - name: Cache Git checkouts of Opam pins by OS
+      uses: actions/cache@v3
+      id: cache-sd4-git
+      with:
+        path: .ci/sd4/g
+        key:
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-git-${{ hashFiles('.ci/sd4/cachekey.ci.inputs') }}{%- endraw %}"
+
+    # Checkout code
+
+    - name: Checkout DKML code
+      shell: bash
+      env:
+        # Push down inputs variables for GitHub/GitLab portable scripts
+        VERBOSE:          "{% raw -%}${{ inputs.VERBOSE }}{%- endraw %}"
+      run: 'sh .ci/sd4/run-checkout-code.sh GITHUB_WORKSPACE "$GITHUB_WORKSPACE"'
+
+    # Setup C compiler
+
+    - name: Compile 'dkml' switch
+      shell: bash
+      env:
+        # Push down inputs variables for GitHub/GitLab portable scripts
+        #   When non-empty, instead of building the standard components from the
+        #   central Opam repository, use the github/gitlab development repositories
+        #   directly.
+        FDOPEN_OPAMEXE_BOOTSTRAP:         "{% raw -%}${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}{%- endraw %}"
+        CONF_DKML_CROSS_TOOLCHAIN:        "{% raw -%}${{ inputs.CONF_DKML_CROSS_TOOLCHAIN }}{%- endraw %}"
+        DISKUV_OPAM_REPOSITORY:           "{% raw -%}${{ inputs.DISKUV_OPAM_REPOSITORY }}{%- endraw %}"
+        DKML_COMPILER:                    "{% raw -%}${{ inputs.DKML_COMPILER }}{%- endraw %}"
+        OCAML_COMPILER:                   "{% raw -%}${{ inputs.OCAML_COMPILER }}{%- endraw %}"
+        SECONDARY_SWITCH:                 "{% raw -%}${{ inputs.SECONDARY_SWITCH }}{%- endraw %}"
+        VERBOSE:                          "{% raw -%}${{ inputs.VERBOSE }}{%- endraw %}"
+
+        # autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}        {{ var.name }}: {{ squot }}{{ var.value }}{{ squot }}{% endfor %}
+      run: |
+        sh .ci/sd4/run-setup-dkml.sh GITHUB_WORKSPACE "$GITHUB_WORKSPACE"
+
+        # Expose opamrun to remaining GitHub Action steps
+        opamrunabs="$GITHUB_WORKSPACE/.ci/sd4/opamrun"
+        if [ -x /usr/bin/cygpath ]; then opamrunabs=$(/usr/bin/cygpath -aw "$opamrunabs"); fi
+        echo "$opamrunabs" >> $GITHUB_PATH

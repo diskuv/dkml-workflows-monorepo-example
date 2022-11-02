@@ -1,0 +1,283 @@
+# setup-dkml
+#   Short form: sd4
+
+# Any GitHub Job that includes this action must be in a strategy matrix.
+# The matrix variables must include:
+# - gh_os: windows-2019
+#   abi_pattern: win32-windows_x86
+#   dkml_host_abi: windows_x86
+
+name: pre-dkml
+author: Diskuv, Inc.
+description: Setup before building OCaml native executables for Windows
+
+# WARNING: The inputs.*.default seem to do nothing!
+# 2022-10-21: Unclear if warning still applies after move from a GitHub child workflow to a GitHub composite action
+inputs:
+  FDOPEN_OPAMEXE_BOOTSTRAP:
+    description: "Use opam.exe from fdopen on Windows. Typically only used when bootstrapping Opam for the first time. May be needed to solve '\"create_process\" failed on sleep: Bad file descriptor' which may need https://github.com/ocaml/opam/commit/417b97d8cfada35682a0f4107eb2e4f9e24fba91"
+    required: false
+    default: 'false'
+  CACHE_PREFIX:
+    description: The prefix of the cache keys.
+    required: false
+    default: "v1"
+  OCAML_COMPILER:
+    description: "The version of the OCaml compiler, as tagged by the https://github.com/diskuv/dkml-base-compiler repository. If not specified the latest compiler, or the version associated with the 'dkml-compiler' input, is used. Currently only 4.12.1 is supported"
+    required: false
+  DKML_COMPILER:
+    description: "Git branch, tag or commit for dkml-compiler. However if OCAML_COMPILER is specified the 'dkml-base-compiler' version is taken from OCAML_COMPILER."
+    required: false
+    default: "" # "@repository@" = Opam ; "" = latest from default branch of git clone
+  CONF_DKML_CROSS_TOOLCHAIN:
+    description: "Git branch, tag or commit for conf-dkml-cross-toolchain"
+    required: false
+    default: "@repository@" # "@repository@" = Opam ; "" = latest from default branch of git clone
+  DISKUV_OPAM_REPOSITORY:
+    description: "Git branch, tag or commit for diskuv-opam-repository"
+    required: false
+    default: "" # DEFAULT_DISKUV_OPAM_REPOSITORY_TAG is used as default for empty strings
+  VERBOSE:
+    description: "Turn on verbose logging"
+    required: false
+    default: 'false'
+  SECONDARY_SWITCH:
+    description: "Turn on secondary 'two' switch"
+    required: false
+    default: 'false'
+
+runs:
+  using: "composite"
+
+  steps:
+    - name: Full matrix variables
+      shell: bash # bash on Windows is Git Bash (an non-upgradable MSYS2 system)
+      # Every matrix variable lookup in this Action should use the output of this step. Even
+      # the matrix variables that the user must specify (ex. dkml_host_abi) should be
+      # referenced using [steps.full_matrix_vars.outputs.dkml_host_abi] rather than
+      # [matrix.dkml_host_abi] so that there is a single place to edit for variable changes.
+      id: full_matrix_vars
+      run: |
+        # Select correct Windows matrix variables
+        case "{% raw -%}${{ matrix.dkml_host_abi }}{%- endraw %}" in
+        {% for (abi,abi_vars) in gh_vars %}{%- if abi_vars.dkml_host_os == "windows" -%}{{ nl }}        {{ abi }}){{ nl }}          {% for (name,value) in abi_vars %}{{ name }}={{ squot }}{{ value }}{{ squot }} {%- if loop.last %} ;; {%- else -%} ; {%- endif %}{{ nl }}          {% endfor %}{%- endif %}{% endfor %}
+        *)  echo "FATAL: Unsupported dkml_host_abi=$dkml_host_abi in Windows action.yml"; exit 107 ;;
+        esac
+
+        add() {
+          echo "$1=$2" | tee -a $GITHUB_OUTPUT | tee -a $GITHUB_ENV
+        }
+
+        add dkml_host_abi "$dkml_host_abi"
+        add abi_pattern "$abi_pattern"
+        add opam_root "$opam_root"
+        add opam_root_cacheable "$opam_root_cacheable"
+        add exe_ext "${exe_ext:-}"
+        add bootstrap_opam_version "${bootstrap_opam_version:-}"
+        add ocaml_options "${ocaml_options:-}"
+
+        add msys2_system "${msys2_system:-}"
+        add msys2_packages "${msys2_packages:-}"
+        add vsstudio_hostarch "${vsstudio_hostarch:-}"
+        add vsstudio_arch "${vsstudio_arch:-}"
+        add vsstudio_dir "${vsstudio_dir:-}"
+        add vsstudio_vcvarsver "${vsstudio_vcvarsver:-}"
+        add vsstudio_winsdkver "${vsstudio_winsdkver:-}"
+        add vsstudio_msvspreference "${vsstudio_msvspreference:-}"
+        add vsstudio_cmakegenerator "${vsstudio_cmakegenerator:-}"
+
+    - name: Install MSYS2 (Windows)
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: "{% raw -%}${{ steps.full_matrix_vars.outputs.msys2_system }}{%- endraw %}"
+        update: true
+        install: >-
+          {% raw -%}${{ steps.full_matrix_vars.outputs.msys2_packages }}{%- endraw %}
+          {%- for var in required_msys2_packages %}
+          {{ var }}{% endfor %}
+
+    - name: Uninstall MSYS2 conflicting executables (Windows)
+      # link.exe interferes with MSVC's link.exe
+      run: rm -vf /usr/bin/link.exe
+      shell: msys2 {0}
+
+    - name: Write POSIX shell and AWK scripts
+      shell: bash
+      run: |
+        install -d .ci/sd4
+
+        cat > .ci/sd4/common-values.sh <<'end_of_script'
+        {{ gh_common_values_script }}
+        end_of_script
+
+        cat > .ci/sd4/run-checkout-code.sh <<'end_of_script'
+        {{ gh_checkout_code_script }}
+        end_of_script
+
+        cat > .ci/sd4/run-setup-dkml.sh <<'end_of_script'
+        {{ gh_setup_dkml_script }}
+        end_of_script
+
+        cat > .ci/sd4/run-teardown-dkml.sh <<'end_of_script'
+        {{ gh_teardown_dkml_script }}
+        end_of_script
+
+        install -d .ci/sd4
+
+        cat > .ci/sd4/msvcenv.awk <<'end_of_script'
+        {{ gh_msvcenv_awk }}
+        end_of_script
+
+        cat > .ci/sd4/msvcpath.awk <<'end_of_script'
+        {{ gh_msvcpath_awk }}
+        end_of_script
+
+    - name: Write PowerShell and Batch scripts
+      shell: pwsh
+      run: |
+        $Content = @'
+        {{ gh_config_vsstudio_ps1 }}
+        '@
+        Set-Content -Path ".ci\sd4\config-vsstudio.ps1" -Encoding Unicode -Value $Content
+
+        $Content = @'
+        {{ gh_get_msvcpath_cmd }}
+
+        REM * We can't use `msys2 -c` directly to query for all MSVC environment variables
+        REM   because it stomps over the PATH. So we are inside a Batch script to do the query.
+        msys2 -c "set | grep -v '^PATH=' | awk -f .ci/sd4/msvcenv.awk > .ci/sd4/msvcenv"
+
+        REM (For some reason no shell commands can happen after the last msys2 -c in GitHub Actions
+        REM so split into multiple steps!
+        '@
+        Set-Content -Path ".ci\sd4\get-msvcpath-into-msys2.cmd" -Encoding Default -Value $Content
+
+    - name: Prepare cache keys
+      # An undocumented bug with GitHub Actions is that a space in the key
+      # will "succeed" but it never gets restored. So we will hash a
+      # user-friendly file instead.
+      shell: bash
+      run: |
+        set -x
+        echo '{{ gh_cachekey_opambin }}' > .ci/sd4/cachekey.opam.binaries
+        echo '{{ gh_cachekey_vsstudio }}' > .ci/sd4/cachekey.vsstudio
+        echo '{{ gh_cachekey_ci_inputs }}' > .ci/sd4/cachekey.ci.inputs
+
+    # Bootstrapping Opam
+
+    - name: Cache Opam bootstrap by OS
+      uses: actions/cache@v3
+      id: cache-sd4-bs
+      with:
+        path: .ci/sd4/bs
+        key:
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-bs-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}{%- endraw %}"
+
+    - name: Cache Opam root by (host,target)
+      uses: actions/cache@v3
+      id: cache-sd4-opamroot
+      with:
+        path: |
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/config
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/dkml
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/two
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/repo
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/download-cache
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.root-init
+          {% raw -%}${{ steps.full_matrix_vars.outputs.opam_root_cacheable }}{%- endraw %}/.ci.repo-init
+        key:
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ env.DKML_VERSION }}_${{ steps.full_matrix_vars.outputs.abi_pattern }}-sd4-opamroot-${{ hashFiles('.ci/sd4/cachekey.opam.binaries') }}-${{ hashFiles('cachekey.ci.inputs') }}{%- endraw %}"
+
+    # The action/checkout steps used for pinning will re-use existing Git objects
+    # because of caching
+    - name: Cache Git checkouts of Opam pins by OS
+      uses: actions/cache@v3
+      id: cache-sd4-git
+      with:
+        path: .ci/sd4/g
+        key:
+          "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_${{ runner.os }}-sd4-git-${{ hashFiles('.ci/sd4/cachekey.ci.inputs') }}{%- endraw %}"
+
+    # Checkout code
+
+    - name: Checkout DKML code
+      shell: bash
+      env:
+        # Push down inputs variables for GitHub/GitLab portable scripts
+        VERBOSE:          "{% raw -%}${{ inputs.VERBOSE }}{%- endraw %}"
+      run: 'sh .ci/sd4/run-checkout-code.sh GITHUB_WORKSPACE "$GITHUB_WORKSPACE"'
+
+    # Setup C compiler
+
+    - name: Cache Visual Studio environment variables by (host,target)
+      uses: actions/cache@v3
+      id: cache-sd4-vsenv
+      with:
+        path: .ci/sd4/vsenv.github
+        key: "{{ cachebust }}_{% raw -%}${{ inputs.CACHE_PREFIX }}_sd4-vsenv-${{ hashFiles('cachekey.vsstudio') }}{%- endraw %}"
+
+    - name: Configure Visual Studio (Windows)
+      shell: pwsh
+      run: |
+        .ci\sd4\config-vsstudio.ps1
+
+    - name: Export Visual Studio location and type (Windows)
+      shell: pwsh
+      run: |
+        Get-Content ${env:GITHUB_WORKSPACE}/.ci/sd4/vsenv.github
+        Get-Content ${env:GITHUB_WORKSPACE}/.ci/sd4/vsenv.github >> $env:GITHUB_ENV
+
+    - name: Capture Visual Studio compiler environment (1/2) (Windows)
+      shell: cmd
+      run: |
+        call .ci\sd4\get-msvcpath-into-msys2.cmd
+
+    - name: Capture Visual Studio compiler environment (2/2) (Windows)
+      shell: msys2 {0}
+      run: |
+        #!/bin/sh
+        set -euf
+        cat .ci/sd4/msvcpath | tr -d '\r' | cygpath --path -f - | awk -f .ci/sd4/msvcpath.awk >> .ci/sd4/msvcenv
+
+        tail -n100 .ci/sd4/msvcpath .ci/sd4/msvcenv >&2
+
+    - name: Compile 'dkml' switch
+      shell: msys2 {0}
+      env:
+        # Push down inputs variables for GitHub/GitLab portable scripts
+        #   When non-empty, instead of building the standard components from the
+        #   central Opam repository, use the github/gitlab development repositories
+        #   directly.
+        FDOPEN_OPAMEXE_BOOTSTRAP:         "{% raw -%}${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}{%- endraw %}"
+        CONF_DKML_CROSS_TOOLCHAIN:        "{% raw -%}${{ inputs.CONF_DKML_CROSS_TOOLCHAIN }}{%- endraw %}"
+        DISKUV_OPAM_REPOSITORY:           "{% raw -%}${{ inputs.DISKUV_OPAM_REPOSITORY }}{%- endraw %}"
+        DKML_COMPILER:                    "{% raw -%}${{ inputs.DKML_COMPILER }}{%- endraw %}"
+        OCAML_COMPILER:                   "{% raw -%}${{ inputs.OCAML_COMPILER }}{%- endraw %}"
+        SECONDARY_SWITCH:                 "{% raw -%}${{ inputs.SECONDARY_SWITCH }}{%- endraw %}"
+        VERBOSE:                          "{% raw -%}${{ inputs.VERBOSE }}{%- endraw %}"
+
+        # autogen from global_env_vars.{% for var in global_env_vars %}{{ nl }}        {{ var.name }}: {{ squot }}{{ var.value }}{{ squot }}{% endfor %}
+      run: |
+        sh .ci/sd4/run-setup-dkml.sh GITHUB_WORKSPACE "$GITHUB_WORKSPACE"
+
+        #   During cache read (the "Cache Opam root by (host,target)" step) we get:
+        #      Cache Size: ~212 MB (222698916 B)
+        #      C:\Windows\System32\tar.exe -z -xf D:/a/_temp/9b656ed6-e727-4499-b4f8-b34d5979d42b/cache.tgz -P -C D:/a/dkml-workflows-regular-example/dkml-workflows-regular-example
+        #      ../../.opam/download-cache/md5/65/65e6dc9b305ccbed1267275fe180f538: Can't create '\\\\?\\D:\\a\\dkml-workflows-regular-example\\dkml-workflows-regular-example\\..\\..\\.opam\\download-cache\\md5\\65\\65e6dc9b305ccbed1267275fe180f538'
+        #      ../../.opam/download-cache/md5/63/63b2ecad76cf56102074f3203fc8c0be: Can't create '\\\\?\\D:\\a\\dkml-workflows-regular-example\\dkml-workflows-regular-example\\..\\..\\.opam\\download-cache\\md5\\63\\63b2ecad76cf56102074f3203fc8c0be'
+        #      tar.exe: Error exit delayed from previous errors.
+        #      Warning: Failed to restore: Tar failed with error: The process 'C:\Windows\System32\tar.exe' failed with exit code 1
+        #      Cache not found for input keys: v1_win32-windows_x86-sd4-opamroot-f674af417c46862703911bc9aee57c19d6c436776c657533610dc233fae8e8af-5850674459249f5d9ea150785baa5177201737ce2c7d59834aa7457c06c929e7
+        #   So get rid of Opam's md5 download cache.
+        rm -rf "${opam_root}/download-cache/md5"
+
+        # Expose opamrun to remaining GitHub Action steps
+        opamrunabs="$GITHUB_WORKSPACE/.ci/sd4/opamrun"
+        if [ -x /usr/bin/cygpath ]; then opamrunabs=$(/usr/bin/cygpath -aw "$opamrunabs"); fi
+        echo "$opamrunabs" >> $GITHUB_PATH
+
+        #   Special case: GITHUB_PATH does not influence msys2.CMD of msys2/setup-msys2@v2, so place in real MSYS2 PATH
+        if [ -n "${MSYSTEM:-}" ]; then
+          install -d /usr/local/bin
+          install -v .ci/sd4/opamrun/opamrun /usr/local/bin/opamrun
+        fi

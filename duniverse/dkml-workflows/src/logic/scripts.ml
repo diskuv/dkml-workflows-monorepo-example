@@ -1,9 +1,14 @@
 open Astring
 open Jingoo
 
-let indent ~pad s =
+(** [indent_after_first] indents all lines after the first line.
+    
+    Blank lines are never indented; that way trailing spaces are
+    not introduced by the indenter. *)
+let indent_after_first ~pad s =
   String.cuts ~sep:"\n" s
-  |> List.mapi (fun i s' -> if i > 0 then pad ^ s' else s')
+  |> List.mapi (fun i s' ->
+         if i > 0 then if String.equal "" s' then "" else pad ^ s' else s')
   |> String.concat ~sep:"\n"
 
 let variations = [ ("gh_", "        "); ("gl_", "      "); ("pc_", "") ]
@@ -65,7 +70,7 @@ let f ~read_script (name, scriptname) =
              scripts which are usually UTF-16BE or UTF-16LE *)
           let script_utf8 = encode_as_utf8 script in
           (* Indent and return *)
-          let indented = indent ~pad script_utf8 in
+          let indented = indent_after_first ~pad script_utf8 in
           (name_prefix ^ name, Jg_types.Tstr indented))
         variations
 
@@ -74,6 +79,7 @@ let to_vars read_script =
     [
       ("common_values_script", "common-values.sh");
       ("setup_dkml_script", "setup-dkml.sh");
+      ("teardown_dkml_script", "teardown-dkml.sh");
       ("checkout_code_script", "checkout-code.sh");
       ("config_vsstudio_ps1", "config-vsstudio.ps1");
       ("get_msvcpath_cmd", "get-msvcpath.cmd");

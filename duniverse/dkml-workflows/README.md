@@ -210,7 +210,7 @@ The full list of examples is:
 > you apply and are approved at
 > https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/issues/new . More details are
 > available at https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/blob/main/README.md
-> 
+>
 > This documentation assumes you have not been approved. There will be callouts
 > for where to edit once you have been approved for macOS.
 
@@ -300,21 +300,23 @@ jobs:
 
       - name: Setup DKML on a Windows host
         if: startsWith(matrix.dkml_host_abi, 'windows_')
-        uses: ./ci/setup-dkml/gh-windows
+        uses: ./ci/setup-dkml/gh-windows/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
 
       - name: Setup DKML on a Darwin host
         if: startsWith(matrix.dkml_host_abi, 'darwin_')
-        uses: ./ci/setup-dkml/gh-darwin
+        uses: ./ci/setup-dkml/gh-darwin/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
 
       - name: Setup DKML on a Linux host
         if: startsWith(matrix.dkml_host_abi, 'linux_')
-        uses: ./ci/setup-dkml/gh-linux
+        uses: ./ci/setup-dkml/gh-linux/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+
+      # This section is for your own build logic which you should place in ci/build-test.sh or a similar file
 
       - name: Build and test the package on Windows host
         if: startsWith(matrix.dkml_host_abi, 'windows_')
@@ -324,6 +326,20 @@ jobs:
       - name: Build and test the package on non-Windows host
         if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
         run: ci/build-test.sh --opam-package ${{ env.OPAM_PACKAGE }} --executable-name ${{ env.EXECUTABLE_NAME }}
+
+      # The Teardown DKML action will finalize caching, etc.
+
+      - name: Teardown DKML on a Windows host
+        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        uses: ./ci/setup-dkml/gh-windows/post
+
+      - name: Teardown DKML on a Darwin host
+        if: startsWith(matrix.dkml_host_abi, 'darwin_')
+        uses: ./ci/setup-dkml/gh-darwin/post
+
+      - name: Teardown DKML on a Linux host
+        if: startsWith(matrix.dkml_host_abi, 'linux_')
+        uses: ./ci/setup-dkml/gh-linux/post
 ```
 
 The [Examples](#examples) include more features, like the uploading and releasing of your built artifacts.

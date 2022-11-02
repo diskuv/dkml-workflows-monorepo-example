@@ -9,8 +9,8 @@ test-gl-linux:
 test-gl-win32:
   extends: .win32:setup-dkml
 
-test-gl-macos:
-  extends: .macos:setup-dkml
+# test-gl-macos:
+#   extends: .macos:setup-dkml
 
 # Test personal computer (PC) scripts
 
@@ -29,12 +29,35 @@ test-pc-windows:
   script:
     - '& test\pc\setup-dkml-${env:dkml_host_abi}.ps1'
 
-test-pc-linux:
-  stage: build # no point waiting for the build phase of `local: 'test/gl/setup-dkml.gitlab-ci.yml'`
-  parallel:
-    matrix:
-      - dkml_host_abi: linux_x86
-      - dkml_host_abi: linux_x86_64
+# ------------
+# PC Linux does not make sense yet! It uses Docker (dockcross) instead of the host (currently
+# it is the Docker image ruby:2.5 per https://docs.gitlab.com/ee/ci/runners/saas/linux_saas_runner.html#saas-runners-on-linux-settings).
+# TODO:
+# 1. Make use of dockcross contigent on the environment variable MANYLINUX=true (which is the default).
+# 2. All GitLab/GitHub templates get MANYLINUX=true while PC templates get MANYLINUX=false.
+# 3. Change host Docker image to debian:stable-slim (probably will need some apt-get commands, similar to existing apk add commands, _which should be part of build-test.sh_)
+# ------------
+#
+# test-pc-linux:
+#   stage: build # no point waiting for the build phase of `local: 'test/gl/setup-dkml.gitlab-ci.yml'`
+#   tags:
+#     - saas-linux-large-amd64 # https://about.gitlab.com/blog/2022/09/22/new-machine-types-for-gitlab-saas-runners/
+#   parallel:
+#     matrix:
+#       - dkml_host_abi: linux_x86
+#       - dkml_host_abi: linux_x86_64
+#
+#   script:
+#     - sh test/pc/setup-dkml-${dkml_host_abi}.sh
 
-  script:
-    - sh test/pc/setup-dkml-${dkml_host_abi}.sh
+# test-pc-macos:
+#   stage: build # no point waiting for the build phase of `local: 'test/gl/setup-dkml.gitlab-ci.yml'`
+#   parallel:
+#     matrix:
+#       - dkml_host_abi: darwin_x86_64
+#
+#   tags:
+#    - shared-macos-amd64
+#
+#   script:
+#     - sh test/pc/setup-dkml-${dkml_host_abi}.sh

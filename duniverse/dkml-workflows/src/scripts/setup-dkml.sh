@@ -11,13 +11,12 @@ DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=36bb91955f0dc5b5710239834f6fcda1db43c221
 #   can come back in.
 DKML_VERSION=0.4.0
 
-
 setup_WORKSPACE_VARNAME=$1
 shift
 setup_WORKSPACE=$1
 shift
 
-# ------------------------ Functions ------------------------
+# ------------------ Variables and functions ------------------------
 
 # shellcheck source=./common-values.sh
 . .ci/sd4/common-values.sh
@@ -40,40 +39,19 @@ escape_arg_as_ocaml_string() {
     printf "%s" "$escape_arg_as_ocaml_string_ARG" | sed 's#\\#\\\\#g; s#"#\\"#g;'
 }
 
-# ---------------------------------------------------------------------
+# Fixup opam_root on Windows to be mixed case. Set original_* and unix_* as well.
+fixup_opam_root
 
-# fixup opam_root on Windows to be mixed case
-original_opam_root=$opam_root
-original_opam_root_cacheable=$opam_root_cacheable
-if [ -x /usr/bin/cygpath ]; then
-    opam_root=$(/usr/bin/cygpath -am "$opam_root")
-    opam_root_cacheable=$(/usr/bin/cygpath -am "$opam_root_cacheable")
-    unix_opam_root=$(/usr/bin/cygpath -au "$opam_root")
-    unix_opam_root_cacheable=$(/usr/bin/cygpath -au "$opam_root_cacheable")
-else
-    unix_opam_root=$opam_root
-    unix_opam_root_cacheable=$opam_root_cacheable
-fi
+# Set TEMP variable for Windows
+export_temp_for_windows
 
-# Set TEMP variable which is used, among other things, for OCaml's
-# [Filename.temp_dir_name] on Win32, and by with-dkml.exe on Windows
-if [ -x /usr/bin/cygpath ]; then
-    if [ -n "${RUNNER_TEMP:-}" ]; then
-        # GitHub Actions
-        TEMP=$(cygpath -am "$RUNNER_TEMP")
-    else
-        # GitLab CI/CD or desktop
-        install -d .ci/tmp
-        TEMP=$(cygpath -am ".ci/tmp")
-    fi
-    export TEMP
-fi
-
-# load VS studio environment
+# Load VS studio environment
 if [ -e .ci/sd4/vsenv.sh ]; then
     # shellcheck disable=SC1091
     . .ci/sd4/vsenv.sh
 fi
+
+# -------------------------------------------------------------------
 
 section_begin setup-info "Summary: setup-dkml"
 
@@ -441,21 +419,7 @@ fi
     fi
 }
 
-# Get Opam Cache (also define saving cache here so can keep similar things close)
-#   * rsync requires Unix paths on MSYS2/Windows (ie. /c/o/blah rather than C:/o/blah)
-#     otherwise rsync thinks the paths are remote
-transfer_dir() {
-    transfer_dir_SRC=$1
-    shift
-    transfer_dir_DST=$1
-    shift
-    # Remove the destination directory completely, but make sure the parent of the
-    # destination directory exists so `mv` will work
-    install -d "$transfer_dir_DST"
-    rm -rf "$transfer_dir_DST"
-    # Move
-    mv "$transfer_dir_SRC" "$transfer_dir_DST"
-}
+# Get Opam Cache
 do_get_opam_cache() {
     if [ "$unix_opam_root_cacheable" = "$unix_opam_root" ]; then return; fi
     if [ ! -e "$unix_opam_root_cacheable" ]; then return; fi
@@ -464,17 +428,6 @@ do_get_opam_cache() {
     transfer_dir "$unix_opam_root_cacheable" "$unix_opam_root"
     echo Finished transfer
     section_end get-opam-cache
-}
-do_save_opam_cache_rsync() {
-    rsync -a --exclude=.opam-switch/build/ "$@" "$unix_opam_root/" "$unix_opam_root_cacheable"
-}
-do_save_opam_cache() {
-    if [ "$unix_opam_root_cacheable" = "$unix_opam_root" ]; then return; fi
-    section_begin save-opam-cache "Transferring Opam cache to $original_opam_root"
-    echo Starting transfer # need some output or GitLab CI will not display the section duration
-    transfer_dir "$unix_opam_root" "$unix_opam_root_cacheable"
-    echo Finished transfer
-    section_end save-opam-cache
 }
 do_get_opam_cache
 
@@ -823,6 +776,13 @@ else
     opamrun switch create two --empty --yes
 fi
 
+do_switch_active() {
+    section_begin "switch-active" "Set dkml as active switch"
+    opamrun switch set dkml --yes
+    section_end "switch-active"
+}
+do_switch_active
+
 do_opam_repositories_add() {
     section_begin "opam-repo-add" "Add Diskuv opam repository"
     if ! opamrun --no-troubleshooting repository list -s | grep '^diskuv'; then
@@ -836,10 +796,9 @@ do_opam_repositories_config() {
     do_opam_repositories_config_NAME=$1
     shift
 
-    section_begin "opam-repo-$do_opam_repositories_config_NAME" "Attach opam repositories to $do_opam_repositories_config_NAME"
+    section_begin "opam-repo-$do_opam_repositories_config_NAME" "Attach Diskuv repository to $do_opam_repositories_config_NAME"
 
     if [ ! -e "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init" ]; then
-        opamrun --no-troubleshooting repository remove default --switch "$do_opam_repositories_config_NAME" --yes || true
         opamrun --no-troubleshooting repository remove diskuv --switch "$do_opam_repositories_config_NAME" --yes || true
         opamrun repository add diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --switch "$do_opam_repositories_config_NAME" --yes
         touch "$opam_root/.ci.$do_opam_repositories_config_NAME.repo-init"
@@ -1054,6 +1013,3 @@ do_summary dkml
 if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
     do_summary two
 fi
-
-# Done with Opam cache!
-do_save_opam_cache
