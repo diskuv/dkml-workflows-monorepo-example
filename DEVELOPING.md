@@ -13,3 +13,9 @@ make duniverse
 touch your_example.opam.locked
 make duniverse
 ```
+
+Then
+
+```bash
+opam exec -- generate-setup-dkml-scaffold && dune build '@gen-dkml' --auto-promote
+```
