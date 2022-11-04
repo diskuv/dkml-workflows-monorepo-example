@@ -1066,7 +1066,19 @@ EOF
         cat >.ci/sd4/opam-with-env <<EOF
 #!/bin/sh
 set -euf
-exec bash "\$${setup_WORKSPACE_VARNAME}"/.ci/sd4/dockcross --args "-v \$${setup_WORKSPACE_VARNAME}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/opam-with-env-real "\$@"
+
+HERE=\$(dirname "\$0")
+HERE=\$(cd "\$HERE" && pwd)
+PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
+
+# Optionally enable terminal if and only if '-it' option given
+termargs=
+if [ "\$#" -ge 1 ] && [ "\$1" = "-it" ]; then
+    shift
+    termargs=-it
+fi
+
+exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/opam-with-env-real "\$@"
 EOF
         chmod +x .ci/sd4/opam-with-env
 
@@ -1099,7 +1111,12 @@ EOF
         cat >.ci/sd4/opam-with-env <<EOF
 #!/bin/sh
 set -euf
-export PATH="\$${setup_WORKSPACE_VARNAME}/.ci/sd4/bs/bin:\$${setup_WORKSPACE_VARNAME}/.ci/sd4/opamexe:\$PATH"
+
+HERE=\$(dirname "\$0")
+HERE=\$(cd "\$HERE" && pwd)
+PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
+
+export PATH="\${PROJECT_DIR}/.ci/sd4/bs/bin:\${PROJECT_DIR}/.ci/sd4/opamexe:\$PATH"
 export OPAMROOT='${opam_root}'
 export OPAMROOTISOK=1
 if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
@@ -1124,7 +1141,7 @@ set +e
 opam "\$@"
 exitcode=\$?
 if [ \$troubleshooting = 1 ]; then
-    [ \$exitcode = 0 ] || "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/troubleshoot-opam.sh" \$OPAMROOT
+    [ \$exitcode = 0 ] || "\${PROJECT_DIR}/.ci/sd4/troubleshoot-opam.sh" \$OPAMROOT
 fi
 exit \$exitcode
 EOF
@@ -1147,11 +1164,15 @@ EOF
 #!/bin/sh
 set -euf
 
+HERE=\$(dirname "\$0")
+HERE=\$(cd "\$HERE" && pwd)
+PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
+
 # Add MSVC compiler environment if available
-if [ -e "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/msvcenv" ]; then
+if [ -e "\${PROJECT_DIR}/.ci/sd4/msvcenv" ]; then
     _oldpath="\$PATH"
     # shellcheck disable=SC1091
-    . "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/msvcenv"
+    . "\${PROJECT_DIR}/.ci/sd4/msvcenv"
     PATH="\$PATH:\$_oldpath"
 
     # MSVC (link.exe) needs a TMP as well.
@@ -1173,7 +1194,7 @@ if [ -n "\${COMSPEC:-}" ]; then
     PATH="/usr/bin:\$PATH"
 fi
 
-exec "\$${setup_WORKSPACE_VARNAME}/.ci/sd4/opam-with-env" "\$@"
+exec "\${PROJECT_DIR}/.ci/sd4/opam-with-env" "\$@"
 EOF
     chmod +x .ci/sd4/opamrun/opamrun
 
@@ -1730,11 +1751,11 @@ To continue your testing, run in PowerShell:
   `$env:dkml_host_abi = "$env:dkml_host_abi"
   `$env:abi_pattern = "$env:abi_pattern"
   `$env:opam_root = "$env:opam_root"
-  `$env:exe_ext = "${env:exe_ext}"
-  `$env:PC_PROJECT_DIR = "$PWD"
+  `$env:exe_ext = "$env:exe_ext"
 
 Now you can use 'opamrun' to do opam commands like:
 
   msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun install XYZ.opam'
+  msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun -it exec -- bash'
   msys64\usr\bin\bash -lc 'PATH="`$PWD/.ci/sd4/opamrun:`$PATH"; opamrun exec -- sh ci/build-test.sh'
 "@

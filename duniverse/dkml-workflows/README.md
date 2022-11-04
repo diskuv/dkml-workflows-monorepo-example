@@ -385,10 +385,15 @@ Run one of:
 # macOS/Intel (or macOS/ARM64 with Rosetta emulator)
 sh ci/setup-dkml/pc/setup-dkml-darwin_x86_64.sh
 
-# Linux on 64-bit Intel/AMD
+# Linux on 64-bit Intel/AMD. Docker is required.
+#   - Running this from macOS/Intel with Docker or macOS/Silicon with Docker will also work
+#   - Running this using with-dkml.exe on Windows with Docker will also work
+#     (the normal Linux containers host, not the Windows containers host)
 sh ci/setup-dkml/pc/setup-dkml-linux_x86_64.sh
 
-# Linux on 32-bit Intel/AMD
+# Linux on 32-bit Intel/AMD. Docker is required.
+#   - Running this from macOS/Intel should also work (not tested). macOS/Silicon will not work.
+#   - Running this using with-dkml.exe on Windows with Docker should also work (not tested)
 sh ci/setup-dkml/pc/setup-dkml-linux_x86.sh
 ```
 
