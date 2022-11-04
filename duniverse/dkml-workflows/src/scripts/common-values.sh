@@ -107,10 +107,10 @@ fixup_opam_root() {
     # shellcheck disable=SC2034
     original_opam_root_cacheable=$opam_root_cacheable
     if [ -x /usr/bin/cygpath ]; then
-        opam_root=$(/usr/bin/cygpath -am "$opam_root")
-        opam_root_cacheable=$(/usr/bin/cygpath -am "$opam_root_cacheable")
-        unix_opam_root=$(/usr/bin/cygpath -au "$opam_root")
-        unix_opam_root_cacheable=$(/usr/bin/cygpath -au "$opam_root_cacheable")
+        opam_root=$(/usr/bin/cygpath -m "$opam_root")
+        opam_root_cacheable=$(/usr/bin/cygpath -m "$opam_root_cacheable")
+        unix_opam_root=$(/usr/bin/cygpath -u "$opam_root")
+        unix_opam_root_cacheable=$(/usr/bin/cygpath -u "$opam_root_cacheable")
     else
         # shellcheck disable=SC2034
         unix_opam_root=$opam_root

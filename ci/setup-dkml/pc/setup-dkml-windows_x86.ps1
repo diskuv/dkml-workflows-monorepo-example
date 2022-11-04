@@ -373,10 +373,10 @@ fixup_opam_root() {
     # shellcheck disable=SC2034
     original_opam_root_cacheable=$opam_root_cacheable
     if [ -x /usr/bin/cygpath ]; then
-        opam_root=$(/usr/bin/cygpath -am "$opam_root")
-        opam_root_cacheable=$(/usr/bin/cygpath -am "$opam_root_cacheable")
-        unix_opam_root=$(/usr/bin/cygpath -au "$opam_root")
-        unix_opam_root_cacheable=$(/usr/bin/cygpath -au "$opam_root_cacheable")
+        opam_root=$(/usr/bin/cygpath -m "$opam_root")
+        opam_root_cacheable=$(/usr/bin/cygpath -m "$opam_root_cacheable")
+        unix_opam_root=$(/usr/bin/cygpath -u "$opam_root")
+        unix_opam_root_cacheable=$(/usr/bin/cygpath -u "$opam_root_cacheable")
     else
         # shellcheck disable=SC2034
         unix_opam_root=$opam_root
@@ -998,9 +998,16 @@ EOF
 
     case "${opam_root}" in
     /* | ?:*) # /a/b/c or C:\Windows
+        validate_supports_docker() {
+            echo "Docker only supported with relative paths for the opam root, not: ${opam_root}" >&2
+            exit 3
+        }
         ;;
     *) # relative path
-        cat >.ci/sd4/opam-with-env-real <<EOF
+        validate_supports_docker() {
+            true
+        }
+        cat >.ci/sd4/opam-in-docker <<EOF
 #!/bin/sh
 set -euf
 export PATH="/work/.ci/sd4/bs/bin:/work/.ci/sd4/opamexe:\$PATH"
@@ -1032,7 +1039,7 @@ if [ \$troubleshooting = 1 ]; then
 fi
 exit \$exitcode
 EOF
-        chmod +x .ci/sd4/opam-with-env-real
+        chmod +x .ci/sd4/opam-in-docker
         ;;
     esac
 
@@ -1079,33 +1086,37 @@ if [ "\$#" -ge 1 ] && [ "\$1" = "-it" ]; then
     termargs=-it
 fi
 
-exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/opam-with-env-real "\$@"
+exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/opam-in-docker "\$@"
 EOF
         chmod +x .ci/sd4/opam-with-env
 
+        validate_supports_docker
+
         # Bundle for consumers of setup-dkml.yml
-        echo '__ opam-with-env-real __' >&2
-        cat .ci/sd4/opam-with-env-real >&2
+        echo '__ opam-in-docker __' >&2
+        cat .ci/sd4/opam-in-docker >&2
         echo '________________________' >&2
-        do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env .ci/sd4/opam-with-env-real .ci/sd4/edr
+        do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env .ci/sd4/opam-in-docker .ci/sd4/edr
 
     elif [ -n "${docker_runner:-}" ]; then
 
         cat >.ci/sd4/opam-with-env <<EOF
 #!/bin/sh
 set -euf
-exec ${docker_runner:-} /work/.ci/sd4/deescalate /work/.ci/sd4/opam-with-env-real "\$@"
+exec ${docker_runner:-} /work/.ci/sd4/deescalate /work/.ci/sd4/opam-in-docker "\$@"
 EOF
         chmod +x .ci/sd4/opam-with-env
 
+        validate_supports_docker
+
         # Bundle for consumers of setup-dkml.yml
-        echo '__ opam-with-env-real __' >&2
-        cat .ci/sd4/opam-with-env-real >&2
+        echo '__ opam-in-docker __' >&2
+        cat .ci/sd4/opam-in-docker >&2
         echo '________________________' >&2
         echo '__ deescalate __' >&2
         cat .ci/sd4/deescalate >&2
         echo '________________' >&2
-        do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env .ci/sd4/opam-with-env-real .ci/sd4/deescalate
+        do_tar_rf .ci/sd4/dist/opam-with-env.tar .ci/sd4/opam-with-env .ci/sd4/opam-in-docker .ci/sd4/deescalate
 
     else
 
