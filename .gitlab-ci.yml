@@ -35,14 +35,13 @@ release:
     
     # Create public packages
     - |
-      if [ -z "${CI_COMMIT_BRANCH:-}" ]; then
-        PKGTAG="${CI_COMMIT_BRANCH}"
-      elif [ -n "${CI_COMMIT_TAG:-}" ]; then
-        PKGTAG=$(echo "${CI_COMMIT_TAG}" | sed 's/^v//')
+      if [ -n "${CI_COMMIT_TAG:-}" ]; then
+        PKGTAG=$(printf "%s" "${CI_COMMIT_TAG}" | sed 's/^v//')
+      elif [ -n "${CI_COMMIT_BRANCH:-}" ]; then
+        PKGTAG=$(printf "%s" "${CI_COMMIT_BRANCH}" | sed 's/^v//')
       else
         PKGTAG="${CI_COMMIT_SHORT_SHA}"
       fi
-
     - CI_PROJECT_PATH_URLENCODED=$(printf %s "${CI_PROJECT_PATH}" | jq -s -R -r @uri) # Must be url-encoded per https://docs.gitlab.com/ee/user/packages/generic_packages/
     - |
       GLAB_CURL_HEADER="JOB-TOKEN: ${CI_JOB_TOKEN}"
