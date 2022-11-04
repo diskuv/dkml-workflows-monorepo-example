@@ -62,6 +62,12 @@ Environment variable.
 .PARAMETER PIN_DUNE
 Environment variable.
 
+.PARAMETER PIN_DUNE_CONFIGURATOR
+Environment variable.
+
+.PARAMETER PIN_DKML_APPS
+Environment variable.
+
 .PARAMETER PIN_OCAMLBUILD
 Environment variable.
 
@@ -78,6 +84,9 @@ Environment variable.
 Environment variable.
 
 .PARAMETER PIN_TIME_NOW
+Environment variable.
+
+.PARAMETER PIN_WITH_DKML
 Environment variable.
 
 #>
@@ -126,13 +135,16 @@ param (
   ,[Parameter()] [string] $PIN_CTYPES = "0.19.2-windowssupport-r4"
   ,[Parameter()] [string] $PIN_CURLY = "0.2.1-windows-env_r2"
   ,[Parameter()] [string] $PIN_DIGESTIF = "1.0.1"
-  ,[Parameter()] [string] $PIN_DUNE = "2.9.3"
+  ,[Parameter()] [string] $PIN_DUNE = "2.9.3+shim.1.0.2~r0"
+  ,[Parameter()] [string] $PIN_DUNE_CONFIGURATOR = "2.9.3"
+  ,[Parameter()] [string] $PIN_DKML_APPS = "1.0.1"
   ,[Parameter()] [string] $PIN_OCAMLBUILD = "0.14.0"
   ,[Parameter()] [string] $PIN_OCAMLFIND = "1.9.1"
   ,[Parameter()] [string] $PIN_OCP_INDENT = "1.8.2-windowssupport"
   ,[Parameter()] [string] $PIN_PPX_EXPECT = "v0.14.1"
   ,[Parameter()] [string] $PIN_PTIME = "0.8.6-msvcsupport"
   ,[Parameter()] [string] $PIN_TIME_NOW = "v0.14.0"
+  ,[Parameter()] [string] $PIN_WITH_DKML = "1.0.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -185,12 +197,15 @@ $env:PIN_CTYPES = $PIN_CTYPES
 $env:PIN_CURLY = $PIN_CURLY
 $env:PIN_DIGESTIF = $PIN_DIGESTIF
 $env:PIN_DUNE = $PIN_DUNE
+$env:PIN_DUNE_CONFIGURATOR = $PIN_DUNE_CONFIGURATOR
+$env:PIN_DKML_APPS = $PIN_DKML_APPS
 $env:PIN_OCAMLBUILD = $PIN_OCAMLBUILD
 $env:PIN_OCAMLFIND = $PIN_OCAMLFIND
 $env:PIN_OCP_INDENT = $PIN_OCP_INDENT
 $env:PIN_PPX_EXPECT = $PIN_PPX_EXPECT
 $env:PIN_PTIME = $PIN_PTIME
 $env:PIN_TIME_NOW = $PIN_TIME_NOW
+$env:PIN_WITH_DKML = $PIN_WITH_DKML
 
 # https://patchwork.kernel.org/project/qemu-devel/patch/20211215073402.144286-17-thuth@redhat.com/
 $env:CHERE_INVOKING = "yes" # Preserve the current working directory
@@ -487,7 +502,7 @@ set -euf
 # Constants
 SHA512_DEVNULL='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
 #   Edited by https://gitlab.com/diskuv/diskuv-ocaml/contributors/release.sh
-DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=36bb91955f0dc5b5710239834f6fcda1db43c221
+DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=97b1b179f08ceb28677a84030a7aad9b704433b7
 # Constants
 #   Should be edited by release.sh, but ...
 #   Can't be 1.0.0 or later until https://github.com/ocaml/opam-repository/pull/21704 ocaml-option-32bit
@@ -559,6 +574,7 @@ DKML_COMPILER=${DKML_COMPILER:-}
 OCAML_COMPILER=${OCAML_COMPILER:-}
 CONF_DKML_CROSS_TOOLCHAIN=${CONF_DKML_CROSS_TOOLCHAIN:-}
 SECONDARY_SWITCH=${SECONDARY_SWITCH:-}
+MANYLINUX=${MANYLINUX:-}
 VERBOSE=${VERBOSE:-}
 .
 -------------------
@@ -597,14 +613,16 @@ PIN_CTYPES=${PIN_CTYPES}
 PIN_CTYPES_FOREIGN=${PIN_CTYPES_FOREIGN}
 PIN_CURLY=${PIN_CURLY}
 PIN_DIGESTIF=${PIN_DIGESTIF}
+PIN_DKML_APPS=${PIN_DKML_APPS}
 PIN_DUNE=${PIN_DUNE}
-PIN_DUNE=${PIN_DUNE}
+PIN_DUNE_CONFIGURATOR=${PIN_DUNE_CONFIGURATOR}
 PIN_OCAMLBUILD=${PIN_OCAMLBUILD}
 PIN_OCAMLFIND=${PIN_OCAMLFIND}
 PIN_OCP_INDENT=${PIN_OCP_INDENT}
 PIN_PPX_EXPECT=${PIN_PPX_EXPECT}
 PIN_PTIME=${PIN_PTIME}
 PIN_TIME_NOW=${PIN_TIME_NOW}
+PIN_WITH_DKML=${PIN_WITH_DKML}
 .
 "
 case "$dkml_host_abi" in
@@ -1385,14 +1403,16 @@ do_pins() {
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ctypes-foreign "${PIN_CTYPES_FOREIGN}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version curly "${PIN_CURLY}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version digestif "${PIN_DIGESTIF}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-apps "${PIN_DKML_APPS}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dune "${PIN_DUNE}"
-    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dune-configurator "${PIN_DUNE}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dune-configurator "${PIN_DUNE_CONFIGURATOR}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ocamlbuild "${PIN_OCAMLBUILD}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ocamlfind "${PIN_OCAMLFIND}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ocp-indent "${PIN_OCP_INDENT}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_expect "${PIN_PPX_EXPECT}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ptime "${PIN_PTIME}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version time_now "${PIN_TIME_NOW}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version with-dkml "${PIN_WITH_DKML}"
     section_end "opam-pins-$do_pins_NAME"
 }
 

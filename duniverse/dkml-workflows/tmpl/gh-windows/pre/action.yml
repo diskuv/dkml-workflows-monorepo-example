@@ -11,8 +11,6 @@ name: pre-dkml
 author: Diskuv, Inc.
 description: Setup before building OCaml native executables for Windows
 
-# WARNING: The inputs.*.default seem to do nothing!
-# 2022-10-21: Unclear if warning still applies after move from a GitHub child workflow to a GitHub composite action
 inputs:
   FDOPEN_OPAMEXE_BOOTSTRAP:
     description: "Use opam.exe from fdopen on Windows. Typically only used when bootstrapping Opam for the first time. May be needed to solve '\"create_process\" failed on sleep: Bad file descriptor' which may need https://github.com/ocaml/opam/commit/417b97d8cfada35682a0f4107eb2e4f9e24fba91"
