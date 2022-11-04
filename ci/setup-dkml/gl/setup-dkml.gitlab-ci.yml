@@ -1462,9 +1462,11 @@ variables:
           windows_*)
               if ! grep -q '\(^|\[\)DiskuvOCamlMSYS2Dir ' ".ci/sd4/setenv.$do_setenv_SWITCH.txt"; then
                   if [ -x /usr/bin/cygpath ]; then
-                      MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw "msys64")
+                      MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw /)
                   else
-                      MSYS2_DIR_NATIVE="$PWD"
+                      # If we are already inside MSYS2 then MSYSTEM_PREFIX should be set. But cygpath should be there as well!!
+                      echo "FATAL: Could not locate MSYS2: there was no cygpath" >&2
+                      exit 3
                   fi
                   MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
                   opamrun option --switch "$do_setenv_SWITCH" setenv+="DiskuvOCamlMSYS2Dir = \"$MSYS2_DIR_NATIVE_ESCAPED\""
@@ -3125,9 +3127,11 @@ variables:
           windows_*)
               if ! grep -q '\(^|\[\)DiskuvOCamlMSYS2Dir ' ".ci/sd4/setenv.$do_setenv_SWITCH.txt"; then
                   if [ -x /usr/bin/cygpath ]; then
-                      MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw "msys64")
+                      MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw /)
                   else
-                      MSYS2_DIR_NATIVE="$PWD"
+                      # If we are already inside MSYS2 then MSYSTEM_PREFIX should be set. But cygpath should be there as well!!
+                      echo "FATAL: Could not locate MSYS2: there was no cygpath" >&2
+                      exit 3
                   fi
                   MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
                   opamrun option --switch "$do_setenv_SWITCH" setenv+="DiskuvOCamlMSYS2Dir = \"$MSYS2_DIR_NATIVE_ESCAPED\""
@@ -4668,9 +4672,11 @@ variables:
           windows_*)
               if ! grep -q '\(^|\[\)DiskuvOCamlMSYS2Dir ' ".ci/sd4/setenv.$do_setenv_SWITCH.txt"; then
                   if [ -x /usr/bin/cygpath ]; then
-                      MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw "msys64")
+                      MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw /)
                   else
-                      MSYS2_DIR_NATIVE="$PWD"
+                      # If we are already inside MSYS2 then MSYSTEM_PREFIX should be set. But cygpath should be there as well!!
+                      echo "FATAL: Could not locate MSYS2: there was no cygpath" >&2
+                      exit 3
                   fi
                   MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
                   opamrun option --switch "$do_setenv_SWITCH" setenv+="DiskuvOCamlMSYS2Dir = \"$MSYS2_DIR_NATIVE_ESCAPED\""
