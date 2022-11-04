@@ -502,7 +502,7 @@ set -euf
 # Constants
 SHA512_DEVNULL='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
 #   Edited by https://gitlab.com/diskuv/diskuv-ocaml/contributors/release.sh
-DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=97b1b179f08ceb28677a84030a7aad9b704433b7
+DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=89c5d7acd8bd21af078e30403830986f338a4a5b
 # Constants
 #   Should be edited by release.sh, but ...
 #   Can't be 1.0.0 or later until https://github.com/ocaml/opam-repository/pull/21704 ocaml-option-32bit
@@ -1487,11 +1487,45 @@ do_use_vsstudio() {
         ;;
     esac
 }
-#   Make 'two' first so that 'dkml' is the final active switch.
 if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
     do_use_vsstudio two
 fi
 do_use_vsstudio dkml
+
+# Because dune.X.Y.Z+shim (and any user DKML packages) requires DKML installed (after all, it is just
+# a with-dkml.exe shim), we need either dkmlvars-v2.sexp or DKML environment
+# variables. Confer: Dkml_runtimelib.Dkml_context.get_dkmlversion
+#
+# grep matches either:
+#   [... [DiskuvOCamlVersion = "1.0.1"] ...]
+#   DiskuvOCamlVersion = "1.0.1"
+do_setenv() {
+    do_setenv_SWITCH=$1
+    shift
+    opamrun option --switch "$do_setenv_SWITCH" setenv > ".ci/sd4/setenv.$do_setenv_SWITCH.txt"
+    if ! grep -q '\(^|\[\)DiskuvOCamlVarsVersion ' ".ci/sd4/setenv.$do_setenv_SWITCH.txt"; then
+        opamrun option --switch "$do_setenv_SWITCH" setenv+='DiskuvOCamlVarsVersion = "2"'
+    fi
+    if ! grep -q '\(^|\[\)DiskuvOCamlVersion ' ".ci/sd4/setenv.$do_setenv_SWITCH.txt"; then
+        opamrun option --switch "$do_setenv_SWITCH" setenv+="DiskuvOCamlVersion = \"$DKML_VERSION\""
+    fi
+    case "${dkml_host_abi}" in
+    windows_*)
+        if ! grep -q '\(^|\[\)DiskuvOCamlMSYS2Dir ' ".ci/sd4/setenv.$do_setenv_SWITCH.txt"; then
+            if [ -x /usr/bin/cygpath ]; then
+                MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw "msys64")
+            else
+                MSYS2_DIR_NATIVE="$PWD"
+            fi
+            MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
+            opamrun option --switch "$do_setenv_SWITCH" setenv+="DiskuvOCamlMSYS2Dir = \"$MSYS2_DIR_NATIVE_ESCAPED\""
+        fi
+    esac
+}
+if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
+    do_setenv two
+fi
+do_setenv dkml
 
 do_install_compiler() {
     do_install_compiler_NAME=$1
