@@ -1166,7 +1166,7 @@ set -euf
 
 HERE=\$(dirname "\$0")
 HERE=\$(cd "\$HERE" && pwd)
-PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
+PROJECT_DIR=\$(cd "\$HERE"/../../.. && pwd)
 
 # Add MSVC compiler environment if available
 if [ -e "\${PROJECT_DIR}/.ci/sd4/msvcenv" ]; then
