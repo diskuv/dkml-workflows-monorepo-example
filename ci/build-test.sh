@@ -20,13 +20,6 @@ shift
 EXECUTABLE_NAME=$1
 shift
 
-# If (executable (public_name EXECUTABLE_NAME) ...) already has .exe then executable will
-# have .exe. Otherwise it depends on exe_ext.
-case "$EXECUTABLE_NAME" in
-*.exe) suffix_ext="" ;;
-*) suffix_ext="${exe_ext:-}" ;;
-esac
-
 # shellcheck disable=SC2154
 echo "
 ======================
@@ -99,24 +92,41 @@ darwin_*)
   ;;
 esac
 
+# Prepare Diagnostics
+case "${dkml_host_abi}" in
+linux_*)
+    if command -v apk; then
+        apk add file
+    fi ;;
+esac
+
 # Copy the installed binaries (including cross-compiled ones) from Opam into dist/ folder.
-# Name the binaries with the target ABI since GitHub Releases are flat namespaces.
+#
+# dist/
+#   <dkml_target_abi>/
+#      <file1>
+#      ...
 install -d dist/
+EXENAME=${EXECUTABLE_NAME%.exe}
 mv _build/install/default "_build/install/default.${dkml_host_abi}"
 set +f
 for i in _build/install/default.*; do
-  target_abi=$(basename "$i" | sed s/default.//)
-  if [ -e "_build/install/default.${target_abi}/bin/${OPAM_PKGNAME}.exe" ]; then
-    install -v "_build/install/default.${target_abi}/bin/${OPAM_PKGNAME}.exe" "dist/${target_abi}-${OPAM_PKGNAME}.exe"
+  dkml_target_abi=$(basename "$i" | sed s/default.//)
+  # Copy executable
+  install -d "dist/${dkml_target_abi}"
+  if [ -e "_build/install/default.${dkml_target_abi}/bin/${EXENAME}.exe" ]; then
+    install -v "_build/install/default.${dkml_target_abi}/bin/${EXENAME}.exe" "dist/${dkml_target_abi}/${EXENAME}.exe"
+    file "dist/${dkml_target_abi}/${EXENAME}.exe"
   else
-    install -v "_build/install/default.${target_abi}/bin/${OPAM_PKGNAME}" "dist/${target_abi}-${OPAM_PKGNAME}"
+    install -v "_build/install/default.${dkml_target_abi}/bin/${EXENAME}" "dist/${dkml_target_abi}/${EXENAME}"
+    file "dist/${dkml_target_abi}/${EXENAME}"
   fi
+  # For Windows you must ask your users to first install the vc_redist executable.
+  # Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
+  case "${dkml_target_abi}" in
+  windows_x86_64) wget -O "dist/${dkml_target_abi}/vc_redist.x64.exe" https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
+  windows_x86) wget -O "dist/${dkml_target_abi}/vc_redist.x86.exe" https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
+  windows_arm64) wget -O "dist/${dkml_target_abi}/vc_redist.arm64.exe" https://aka.ms/vs/17/release/vc_redist.arm64.exe ;;
+  esac
 done
-
-# For Windows you must ask your users to first install the vc_redist executable.
-# Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
-case "${dkml_host_abi}" in
-windows_x86_64) wget -O dist/vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
-windows_x86) wget -O dist/vc_redist.x86.exe https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
-windows_arm64) wget -O dist/vc_redist.arm64.exe https://aka.ms/vs/17/release/vc_redist.arm64.exe ;;
-esac
+set -f

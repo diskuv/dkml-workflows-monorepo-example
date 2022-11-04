@@ -35,20 +35,24 @@ release:
     
     # Create public packages
     - |
-      if [ -z "$CI_COMMIT_TAG" ]; then
-        PKGTAG="$CI_COMMIT_BRANCH"
-      elif [ -n "$CI_COMMIT_TAG" ]; then
-        PKGTAG=$(echo "$CI_COMMIT_TAG" | sed 's/^v//')
+      if [ -z "${CI_COMMIT_BRANCH:-}" ]; then
+        PKGTAG="${CI_COMMIT_BRANCH}"
+      elif [ -n "${CI_COMMIT_TAG:-}" ]; then
+        PKGTAG=$(echo "${CI_COMMIT_TAG}" | sed 's/^v//')
       else
-        PKGTAG="$CI_COMMIT_SHORT_SHA"
+        PKGTAG="${CI_COMMIT_SHORT_SHA}"
       fi
 
-    - CI_PROJECT_PATH_URLENCODED=$(printf %s "$CI_PROJECT_PATH" | jq -s -R -r @uri) # Must be url-encoded per https://docs.gitlab.com/ee/user/packages/generic_packages/
-    - PACKAGE_REGISTRY_URL="${CI_API_V4_URL}/projects/$CI_PROJECT_PATH_URLENCODED/packages/generic/$THE_EXECUTABLE_NAME/$PKGTAG"
-    - echo $PACKAGE_REGISTRY_URL
+    - CI_PROJECT_PATH_URLENCODED=$(printf %s "${CI_PROJECT_PATH}" | jq -s -R -r @uri) # Must be url-encoded per https://docs.gitlab.com/ee/user/packages/generic_packages/
     - |
       GLAB_CURL_HEADER="JOB-TOKEN: ${CI_JOB_TOKEN}"
-      find _release -mindepth 1 -maxdepth 1 -type f | while read -r releasefile; do
-        curl --fail --header "$GLAB_CURL_HEADER" --upload-file "_release/$releasefile" "$PACKAGE_REGISTRY_URL/$releasefile"
+      find _release -mindepth 1 -maxdepth 1 -type d | while read -r dkml_target_abi; do
+        dkml_target_abi=$(basename "${dkml_target_abi}")
+        PACKAGE_REGISTRY_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_PATH_URLENCODED}/packages/generic/${dkml_target_abi}/${PKGTAG}"
+        echo "${PACKAGE_REGISTRY_URL}"
+        find "_release/${dkml_target_abi}" -mindepth 1 -maxdepth 1 -type f | while read -r file; do
+          file=$(basename "${file}")
+          curl --fail --header "${GLAB_CURL_HEADER}" --upload-file "_release/${dkml_target_abi}/${file}" "${PACKAGE_REGISTRY_URL}/${file}"
+        done
       done
 
