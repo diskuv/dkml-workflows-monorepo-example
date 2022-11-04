@@ -40,11 +40,6 @@ abi_pattern=$abi_pattern
 opam_root=$opam_root
 exe_ext=${exe_ext:-}
 .
--------
-Derived
--------
-suffix_ext=$suffix_ext
-.
 "
 
 # PATH. Add opamrun
