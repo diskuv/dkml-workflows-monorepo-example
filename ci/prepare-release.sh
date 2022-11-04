@@ -14,7 +14,7 @@ _release="$(pwd)/_release"
 install -d "${_release}"
 
 cd dist
-if [ -n "${GITHUB_ENV}" ]; then
+if [ -n "${GITHUB_ENV:-}" ]; then
     # GitHub Releases
     #   Filename = Target_ABI '-' File
     find . -mindepth 1 -maxdepth 1 -type d | while read -r dkml_target_abi; do
