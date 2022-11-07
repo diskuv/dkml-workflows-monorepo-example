@@ -2,9 +2,3 @@ x-opam-monorepo-opam-provided: [
     "conf-dkml-cross-toolchain"
     "dkml-base-compiler"
 ]
-pin-depends: [
-  [
-    "dkml-workflows.1.1.0"
-    "git+https://github.com/diskuv/dkml-workflows.git#v1"
-  ]
-]

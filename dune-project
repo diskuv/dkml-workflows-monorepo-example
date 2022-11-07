@@ -27,10 +27,7 @@
    (= 2.9.3))
   diskuvbox
   conf-dkml-cross-toolchain
-  (dkml-workflows
-   (and
-    (>= 1.1.0)
-    :build)))
+  (dkml-workflows (and (>= 1.1.0) :build)))
  (tags
   (topics "to describe" your project)))
 
