@@ -5,9 +5,9 @@
 > is being tracked in [issue opam-monorepo#327](https://github.com/ocamllabs/opam-monorepo/issues/327).
 
 An [Opam Monorepo](https://github.com/ocamllabs/opam-monorepo#readme) example for the
-[dkml-workflows] collection of GitHub Action workflows. DKML helps you
+[dkml-workflows] collection of GitHub Action, GitLab CI/CD and desktop workflows. DKML helps you
 distribute native OCaml applications on the most common operating systems.
-In particular the [setup-dkml.yml@v1] of [dkml-workflows] builds:
+In particular [dkml-workflows] builds:
 * Windows libraries and executables with the traditional Visual Studio compiler, avoiding hard-to-debug runtime issued caused by compiler incompatibilities
 * macOS libraries and executables for both Intel and ARM64 (Apple Silicon) architectures
 * Linux libraries and executables on an ancient "glibc" C library, letting you distribute your software to most Linux users
@@ -19,8 +19,8 @@ The full list of examples is:
 | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | [dkml-workflows-monorepo-example](https://github.com/diskuv/dkml-workflows-monorepo-example) | **Not ready for public use yet!**<br>You want to cross-compile ARM64 on Mac Intel.<br>You are building [Mirage unikernels](https://mirage.io/). |
 | [dkml-workflows-regular-example](https://github.com/diskuv/dkml-workflows-regular-example)   | Everybody else                                                                                                                                  |
-> Before using these examples be sure to read the [advantages and disadvantages of setup-workflow][setup-dkml.yml@v1].
-> One particular limitation is that, as of today, [setup-dkml.yml@v1] only supports OCaml 4.12.1.
+> Before using these examples be sure to read the [advantages and disadvantages of setup-dkml][dkml-workflows].
+> One particular limitation is that, as of today, [dkml-workflows] only supports OCaml 4.12.1.
 
 These workflows are **not quick** and won't improve unless you are willing to contribute PRs!
 Expect to wait approximately:
@@ -82,4 +82,3 @@ for economic support to the development of Diskuv OCaml.
 | Static checks    |            | [![Static checks](https://github.com/diskuv/dkml-workflows-monorepo-example/actions/workflows/static.yml/badge.svg)](https://github.com/diskuv/dkml-workflows-monorepo-example/actions/workflows/static.yml)  |
 
 [dkml-workflows]: https://github.com/diskuv/dkml-workflows#dkml-workflows
-[setup-dkml.yml@v1]: https://github.com/diskuv/dkml-workflows/tree/v1#setup-dkml-auto-generating-github-releases-for-ocaml-native-executables
