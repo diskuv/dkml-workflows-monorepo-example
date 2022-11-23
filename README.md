@@ -22,23 +22,15 @@ The full list of examples is:
 > Before using these examples be sure to read the [advantages and disadvantages of setup-dkml][dkml-workflows].
 > One particular limitation is that, as of today, [dkml-workflows] only supports OCaml 4.12.1.
 
-These workflows are **not quick** and won't improve unless you are willing to contribute PRs!
 Expect to wait approximately:
 
 | Build Step                                               | First Time | Subsequent Times |
 | -------------------------------------------------------- | ---------- | ---------------- |
-| setup-dkml / win32-windows_x86                           | `29m`      | `6m`             |
-| setup-dkml / win32-windows_x86_64                        | `29m`      | `6m`             |
-| setup-dkml / macos-darwin_all [1]                        | `29m`      | `6m`             |
-| setup-dkml / manylinux2014-linux_x86 (CentOS 7, etc.)    | `16m`      | `5m`             |
-| setup-dkml / manylinux2014-linux_x86_64 (CentOS 7, etc.) | `13m`      | `5m`             |
-| build / win32-windows_x86                                | `23m`      | todo             |
-| build / win32-windows_x86_64                             | `19m`      | todo             |
-| build / macos-darwin_all                                 | `27m`      | todo             |
-| build / manylinux2014-linux_x86 (CentOS 7, etc.)         | `09m`      | todo             |
-| build / manylinux2014-linux_x86_64 (CentOS 7, etc.)      | `09m`      | todo             |
-| release                                                  | `01m`      | todo             |
-| **TOTAL** *(not cumulative since steps run in parallel)* | `57m`      | todo             |
+| build / win32-windows_x86                                | `33m`      | `8m`             |
+| build / win32-windows_x86_64                             | `35m`      | `11m`            |
+| build / macos-darwin_all                                 | `26m`      | `6m`             |
+| build / manylinux2014-linux_x86 (CentOS 7, etc.)         | `20m`      | `5m`             |
+| build / manylinux2014-linux_x86_64 (CentOS 7, etc.)      | `16m`      | `5m`             |
 
 You can see an example workflow at https://github.com/diskuv/dkml-workflows-monorepo-example/actions/workflows/package.yml
 
