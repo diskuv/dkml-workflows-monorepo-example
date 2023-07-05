@@ -12,7 +12,7 @@ doc: "https://url/to/documentation"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "dkml-base-compiler"
-  "dune" {>= "2.9" & = "2.9.3"}
+  "dune" {>= "3.0" & = "2.9.3"}
   "diskuvbox"
   "conf-dkml-cross-toolchain"
   "dkml-workflows" {>= "1.1.0" & build}
@@ -27,12 +27,10 @@ build: [
     name
     "-j"
     jobs
-    "--promote-install-files=false"
     "@install"
     "@runtest" {with-test}
     "@doc" {with-doc}
   ]
-  ["dune" "install" "-p" name "--create-install-files" name]
 ]
 dev-repo: "git+https://github.com/username/reponame.git"
 x-opam-monorepo-opam-provided: [
