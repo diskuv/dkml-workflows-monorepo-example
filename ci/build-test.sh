@@ -5,20 +5,8 @@
 
 set -euf
 
-usage() {
-  echo "'--opam-package OPAM_PACKAGE.opam --executable-name EXECUTABLE_NAME' where you have a (executable (public_name EXECUTABLE_NAME) ...) in some 'dune' file" >&2
-  exit 3
-}
-OPTION=$1
-shift
-[ "$OPTION" = "--opam-package" ] || usage
-OPAM_PACKAGE=$1
-shift
-OPTION=$1
-shift
-[ "$OPTION" = "--executable-name" ] || usage
-EXECUTABLE_NAME=$1
-shift
+OPAM_PACKAGE=your_example
+EXECUTABLE_NAME=your_example
 
 # shellcheck disable=SC2154
 echo "
