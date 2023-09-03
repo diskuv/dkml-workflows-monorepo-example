@@ -1,3 +1,8 @@
 {
-    "aliveStatusCodes": [200, 206, 401]
+    "aliveStatusCodes": [200, 206, 401],
+    "ignorePatterns": [
+        {
+            "pattern": "^https://twitter.com/diskuv"
+        }
+    ]    
 }
