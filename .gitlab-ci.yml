@@ -1,28 +1,21 @@
 include:
-  - local: 'ci/setup-dkml/gl/setup-dkml.gitlab-ci.yml'
-
-variables:
-  THE_OPAM_PACKAGE: your_example.opam
-  THE_EXECUTABLE_NAME: your_example
-
-  # Overrides of the included setup-dkml.gitlab-ci.yml
-  DKML_COMPILER: "" # You can override the dkml-compiler package version. Example: 4.12.1-v1.0.2
+  - local: '.ci/dkml-compilers/gl/setup-dkml.gitlab-ci.yml'
 
 linux:build:
   extends: .linux:setup-dkml
   script:
-    - ci/build-test.sh --opam-package "$THE_OPAM_PACKAGE" --executable-name "$THE_EXECUTABLE_NAME"
+    - ci/build-test.sh
 
 # Exclude macOS until you have a https://gitlab.com/gitlab-com/runner-saas-macos-access-requests/-/issues approved!
 # macos:build:
 #   extends: .macos:setup-dkml
 #   script:
-#     - ci/build-test.sh --opam-package "$THE_OPAM_PACKAGE" --executable-name "$THE_EXECUTABLE_NAME"
+#     - ci/build-test.sh
 
 win32:build:
   extends: .win32:setup-dkml
   script:
-    - msys64\usr\bin\bash -lc "ci/build-test.sh --opam-package ${env:THE_OPAM_PACKAGE} --executable-name ${env:THE_EXECUTABLE_NAME}"
+    - msys64\usr\bin\bash -lc "ci/build-test.sh"
 
 release:
   stage: deploy
